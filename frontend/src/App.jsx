@@ -23,6 +23,7 @@ import Profile from './components/Profile';
 import VaultModal from './components/VaultModal';
 import AdminPanel from './components/AdminPanel';
 import History from './components/History';
+import CategoryManager from './components/CategoryManager';
 import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
@@ -40,6 +41,14 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile', 'add-transaction', 'history', 'admin'
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('appCategories');
+    if (saved) return JSON.parse(saved);
+    return {
+      expense: ['Oziq-ovqat', 'Transport', 'Xaridlar', 'Kafe', 'Ko\'ngilochar', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Boshqa'],
+      income: ['Maosh', 'Biznes', 'Sovg\'alar', 'Boshqa']
+    };
+  });
   const [settings, setSettings] = useState({ budget: 0, isAdmin: false, is_blocked: false });
   const [loading, setLoading] = useState(true);
   const [tgUser, setTgUser] = useState(null);
@@ -567,7 +576,7 @@ function App() {
       ) : (
         <>
           {/* Month Navigation Selector Bar */}
-          {activeTab !== 'settings' && (
+          {(activeTab === 'dashboard' || activeTab === 'analytics' || activeTab === 'history') && (
             <div className="month-navigation-bar">
               <button type="button" className="month-nav-btn" onClick={handlePrevMonth}>&larr;</button>
               <span className="month-nav-label">
@@ -643,6 +652,17 @@ function App() {
               setActiveTab={setActiveTab}
             />
           )}
+          {activeTab === 'category-manager' && (
+            <CategoryManager 
+              categories={categories}
+              setCategories={(newCategories) => {
+                setCategories(newCategories);
+                localStorage.setItem('appCategories', JSON.stringify(newCategories));
+              }}
+              setActiveTab={setActiveTab}
+              t={t}
+            />
+          )}
         </>
       )}
 
@@ -654,6 +674,7 @@ function App() {
              handleAddTransaction(tx);
              setActiveTab('dashboard');
           }}
+          categories={categories}
           t={t}
         />
       )}

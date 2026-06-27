@@ -2,27 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
-const EXPENSE_CATEGORIES = [
-  'Oziq-ovqat',
-  'Transport',
-  'Xaridlar',
-  'Kafe',
-  'Ko\'ngilochar',
-  'Kommunal',
-  'Sog\'liq',
-  'Ta\'lim',
-  'Xizmatlar',
-  'Boshqa'
-];
-
-const INCOME_CATEGORIES = [
-  'Maosh',
-  'Biznes',
-  'Sovg\'alar',
-  'Boshqa'
-];
-
-function AddTransaction({ onClose, onSubmit, t }) {
+function AddTransaction({ onClose, onSubmit, categories, t }) {
   const [type, setType] = useState('expense'); 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Oziq-ovqat');
@@ -33,11 +13,11 @@ function AddTransaction({ onClose, onSubmit, t }) {
   // Update default category when switching expense/income
   useEffect(() => {
     if (type === 'expense') {
-      setCategory('Oziq-ovqat');
+      setCategory(categories.expense[0] || 'Boshqa');
     } else {
-      setCategory('Maosh');
+      setCategory(categories.income[0] || 'Boshqa');
     }
-  }, [type]);
+  }, [type, categories]);
 
   const handleTypeChange = (newType) => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
@@ -81,7 +61,7 @@ function AddTransaction({ onClose, onSubmit, t }) {
     return '22px';
   };
 
-  const categoriesList = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const categoriesList = type === 'expense' ? categories.expense : categories.income;
 
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>

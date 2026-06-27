@@ -13,6 +13,17 @@ import { getCategoryConfig } from './Dashboard';
 function Analytics({ stats, currency, formatAmount, t, lang }) {
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const hasExpenses = stats.totalExpense > 0;
+
+  // Convert categories to the format expected by Analytics
+  const expenseCategories = stats.categories
+    .filter(c => c.expense > 0)
+    .map(c => ({
+      name: c.name,
+      amount: c.expense,
+      percentage: hasExpenses ? Math.round((c.expense / stats.totalExpense) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount);
+  
   
   // Calculate Savings Rate
   const savingsAmount = stats.totalIncome - stats.totalExpense;
@@ -51,7 +62,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
         }
       }
       if (hasExpenses) {
-        const sortedCategories = [...stats.categories].sort((a, b) => b.percentage - a.percentage);
+        const sortedCategories = [...expenseCategories].sort((a, b) => b.percentage - a.percentage);
         const topCat = sortedCategories[0];
         if (topCat && topCat.percentage > 35) {
           insights.push({
@@ -59,14 +70,14 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
             text: `Больше всего вы потратили на категорию "${t.categories[topCat.name] || topCat.name}" (${topCat.percentage}%). Стоит обратить на это внимание.`
           });
         }
-        const food = stats.categories.find(c => c.name === 'Oziq-ovqat');
+        const food = expenseCategories.find(c => c.name === 'Oziq-ovqat');
         if (food && food.percentage > 40) {
           insights.push({
             type: 'warning',
             text: `Расходы на продукты питания составляют ${food.percentage}% ваших расходов. Домашняя еда поможет вам сэкономить.`
           });
         }
-        const entertainment = stats.categories.find(c => c.name === 'Ko\'ngilochar');
+        const entertainment = expenseCategories.find(c => c.name === 'Ko\'ngilochar');
         if (entertainment && entertainment.percentage > 25) {
           insights.push({
             type: 'info',
@@ -109,7 +120,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
         }
       }
       if (hasExpenses) {
-        const sortedCategories = [...stats.categories].sort((a, b) => b.percentage - a.percentage);
+        const sortedCategories = [...expenseCategories].sort((a, b) => b.percentage - a.percentage);
         const topCat = sortedCategories[0];
         if (topCat && topCat.percentage > 35) {
           insights.push({
@@ -117,14 +128,14 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
             text: `Your biggest expense is "${t.categories[topCat.name] || topCat.name}" (${topCat.percentage}%). Focus on managing this area.`
           });
         }
-        const food = stats.categories.find(c => c.name === 'Oziq-ovqat');
+        const food = expenseCategories.find(c => c.name === 'Oziq-ovqat');
         if (food && food.percentage > 40) {
           insights.push({
             type: 'warning',
             text: `Food expenses make up ${food.percentage}% of your expenses. Cooking at home could help you save.`
           });
         }
-        const entertainment = stats.categories.find(c => c.name === 'Ko\'ngilochar');
+        const entertainment = expenseCategories.find(c => c.name === 'Ko\'ngilochar');
         if (entertainment && entertainment.percentage > 25) {
           insights.push({
             type: 'info',
@@ -167,7 +178,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
         }
       }
       if (hasExpenses) {
-        const sortedCategories = [...stats.categories].sort((a, b) => b.percentage - a.percentage);
+        const sortedCategories = [...expenseCategories].sort((a, b) => b.percentage - a.percentage);
         const topCat = sortedCategories[0];
         if (topCat && topCat.percentage > 35) {
           insights.push({
@@ -175,14 +186,14 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
             text: `Eng ko'p xarajatingiz "${t.categories[topCat.name] || topCat.name}" toifasiga to'g'ri kelmoqda (${topCat.percentage}%). Ushbu sohaga e'tibor qarating.`
           });
         }
-        const food = stats.categories.find(c => c.name === 'Oziq-ovqat');
+        const food = expenseCategories.find(c => c.name === 'Oziq-ovqat');
         if (food && food.percentage > 40) {
           insights.push({
             type: 'warning',
             text: `Oziq-ovqat xarajatlari umumiy xarajatlaringizning ${food.percentage}% qismini tashkil qilmoqda. Uyda ovqatlanish tejashga yordam beradi.`
           });
         }
-        const entertainment = stats.categories.find(c => c.name === 'Ko\'ngilochar');
+        const entertainment = expenseCategories.find(c => c.name === 'Ko\'ngilochar');
         if (entertainment && entertainment.percentage > 25) {
           insights.push({
             type: 'info',
@@ -219,7 +230,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
   const activeInsights = generateInsights();
 
   // Selected or hovered category label configuration
-  const centerCategory = hoveredCategory || (stats.categories.length > 0 ? stats.categories[0] : null);
+  const centerCategory = hoveredCategory || (expenseCategories.length > 0 ? expenseCategories[0] : null);
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -275,7 +286,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
                 const r = 38;
                 const c = 2 * Math.PI * r; 
 
-                return stats.categories.map((cat) => {
+                return expenseCategories.map((cat) => {
                   const config = getCategoryConfig(cat.name);
                   const strokeDasharray = `${(cat.percentage / 100) * c} ${c}`;
                   const strokeDashoffset = c - (accumulatedPercent / 100) * c;
@@ -366,7 +377,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
             {t.topCategory}
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {stats.categories.map((cat) => {
+            {expenseCategories.map((cat) => {
               const config = getCategoryConfig(cat.name);
               const Icon = config.icon;
               return (

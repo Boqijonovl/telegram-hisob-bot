@@ -7,7 +7,8 @@ import {
   ShieldAlert,
   Moon,
   Sun,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 
 function Profile({ 
@@ -77,6 +78,17 @@ function Profile({
           </div>
           <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>{t.settings}</div>
           <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Til va mavzu</div>
+        </div>
+
+        {/* Kategoriyalar */}
+        <div onClick={() => setActiveTab('category-manager')} style={{
+          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
+        }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+            <Layers size={16} />
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Kategoriyalar</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Qo'shish va o'zgartirish</div>
         </div>
         
         {/* Admin Panel if Admin */}
