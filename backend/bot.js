@@ -65,36 +65,40 @@ function replaceUzbekNumberWords(str) {
   return result.join(' ');
 }
 
-// Transaction parser from chat message text (finds amount at any position in the sentence)
+// Transaction parser from chat message text (allows number to be anywhere in the message)
 function parseTransactionText(text) {
   // Convert word-based numbers to digits first (e.g. "ellik ming" -> "50000")
   const preparedText = replaceUzbekNumberWords(text);
   const parts = preparedText.trim().split(/\s+/);
   if (parts.length === 0) return null;
 
-  let amount = NaN;
-  let amountIndex = -1;
+  // Search for the amount in all parts
+  let amount = null;
   let isIncome = false;
+  let amountIndex = -1;
 
-  // Search for the first valid number in the words list
   for (let i = 0; i < parts.length; i++) {
-    let cleanWord = parts[i].replace(/[^\d+.-]/g, '');
-    const incomeCheck = cleanWord.startsWith('+');
-    if (incomeCheck || cleanWord.startsWith('-')) {
-      cleanWord = cleanWord.substring(1);
-    }
-    const val = parseFloat(cleanWord);
-    if (!isNaN(val) && val > 0) {
-      amount = val;
-      amountIndex = i;
-      isIncome = incomeCheck;
-      break;
+    const part = parts[i];
+    // Match strings that look like a number, possibly starting with + or -
+    // e.g. 50000, +150000, -25000
+    if (/^[+-]?\d+(?:\.\d+)?$/.test(part)) {
+      isIncome = part.startsWith('+');
+      let cleanPart = part;
+      if (part.startsWith('+') || part.startsWith('-')) {
+        cleanPart = part.substring(1);
+      }
+      amount = parseFloat(cleanPart);
+      if (!isNaN(amount) && amount > 0) {
+        amountIndex = i;
+        break; // Found the amount!
+      }
     }
   }
 
-  if (isNaN(amount)) return null;
+  // If no valid amount found, return null
+  if (amount === null) return null;
 
-  // Description is everything else excluding the parsed amount word
+  // Remove the amount from the words to get the description
   const remaining = parts.filter((_, idx) => idx !== amountIndex);
   const remainingText = remaining.join(' ');
   const remainingLower = remainingText.toLowerCase();
@@ -105,10 +109,10 @@ function parseTransactionText(text) {
 
   // Keyword to category mappings
   const keywordMap = {
-    'Oziq-ovqat': ['ovqat', 'tushlik', 'kechki', 'non', 'kafe', 'restoran', 'choyxona', 'shirinlik', 'bozor-ochar', 'supermarket', 'korzinka', 'makro', 'osh', 'fastfood', 'pitsa', 'somsa', 'burger'],
-    'Transport': ['taksi', 'benzin', 'metro', 'avtobus', 'yo\'l', 'yol', 'zapravka', 'propan', 'metan', 'yandex', 'mashina', 'remont', 'moy', 'shina'],
+    'Oziq-ovqat': ['ovqat', 'tushlik', 'kechki', 'non', 'kafe', 'restoran', 'choyxona', 'shirinlik', 'bozor-ochar', 'supermarket', 'korzinka', 'makro', 'osh', 'fastfood', 'pitsa', 'somsa', 'burger', 'choy', 'suv', 'cola', 'fanta'],
+    'Transport': ['taksi', 'benzin', 'metro', 'avtobus', 'yo\'l', 'yol', 'zapravka', 'propan', 'metan', 'yandex', 'mashina', 'remont', 'moy', 'shina', 'yol-kira', 'yolkira'],
     'Kommunal': ['svet', 'gaz', 'suv', 'arenda', 'ijara', 'uy', 'kvartira', 'issiq', 'internet', 'wifi', 'komunalka', 'payme', 'click'],
-    'Xaridlar': ['kiyim', 'bozor', 'shopping', 'telefon', 'noutbuk', 'texnika', 'oyoq-kiyim', 'shim', 'kofta', 'ko\'zoynak', 'soat'],
+    'Xaridlar': ['kiyim', 'bozor', 'shopping', 'telefon', 'noutbuk', 'texnika', 'oyoq-kiyim', 'shim', 'kofta', 'ko\'zoynak', 'soat', 'sumka', 'parfumeriya'],
     'Ko\'ngilochar': ['kino', 'teatr', 'oyin', 'o\'yin', 'konsert', 'park', 'attraksion', 'playstation', 'ps', 'klub', 'sayohat', 'dam'],
     'Sog\'liqni saqlash': ['dori', 'doktor', 'shifokor', 'apteka', 'kasal', 'klinika', 'tish', 'shifoxona', 'analiz'],
     'Ta\'lim': ['kurs', 'maktab', 'universitet', 'kitob', 'institut', 'repetitor', 'shartnoma', 'kontrakt', 'o\'quv', 'oquv'],
@@ -303,14 +307,12 @@ Hisob-kitob botiga xush kelibsiz!
       const audioRes = await fetch(fileLink.href);
       const audioBuffer = await audioRes.arrayBuffer();
 
-      // Submit to Hugging Face Whisper Large v3 with load-recovery retries
-      let retries = 5;
-      const delay = 5000;
-      let hfRes;
-      let hfData;
-
+      // Submit to Hugging Face Whisper Large v3 (with retry logic for 503 service loading)
+      let transcribedText = "";
+      let retries = 4;
+      
       while (retries > 0) {
-        hfRes = await fetch(
+        const hfRes = await fetch(
           "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
           {
             headers: {
@@ -318,31 +320,36 @@ Hisob-kitob botiga xush kelibsiz!
               "Content-Type": "audio/ogg"
             },
             method: "POST",
-            body: audioBuffer
+            body: Buffer.from(audioBuffer)
           }
         );
 
-        hfData = await hfRes.json().catch(() => ({}));
+        if (hfRes.ok) {
+          const hfData = await hfRes.json();
+          transcribedText = hfData.text || "";
+          break; // successfully transcribed!
+        }
 
-        if (hfRes.status === 503 && hfData.error && hfData.error.includes("loading")) {
-          const waitSec = Math.round(hfData.estimated_time || 10);
+        const errJson = await hfRes.json().catch(() => ({}));
+        
+        // Handle 503 model currently loading state
+        if (hfRes.status === 503 && errJson.estimated_time) {
+          console.log(`HuggingFace model is loading. Waiting ${errJson.estimated_time}s before retry...`);
+          const waitTime = Math.min(Math.ceil(errJson.estimated_time), 6) * 1000;
+          
           await ctx.telegram.editMessageText(
             ctx.chat.id,
             progressMsg.message_id,
             null,
-            `🎙 Sun'iy intellekt modeli yuklanmoqda, iltimos ${waitSec} soniya kutib turing...`
-          );
-          // Wait and retry
-          await new Promise(resolve => setTimeout(resolve, Math.max(waitSec * 1000, delay)));
+            `🎙 Model yuklanmoqda (kutish: ~${Math.ceil(waitTime / 1000)} soniya)...`
+          ).catch(() => {});
+          
+          await new Promise(resolve => setTimeout(resolve, waitTime));
           retries--;
-        } else if (!hfRes.ok) {
-          throw new Error(hfData.error || `Hugging Face returned status ${hfRes.status}`);
         } else {
-          break;
+          throw new Error(errJson.error || `Hugging Face returned status ${hfRes.status}`);
         }
       }
-
-      const transcribedText = hfData?.text || "";
 
       if (!transcribedText.trim()) {
         return ctx.telegram.editMessageText(
