@@ -1,5 +1,6 @@
 import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
+import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
 
 dotenv.config();
@@ -18,9 +19,57 @@ function escapeMarkdown(text) {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
 }
 
+// Converts Uzbek text numbers ("ellik ming", "yigirma besh ming") to digits (e.g. 50000, 25000)
+function replaceUzbekNumberWords(str) {
+  const numberWords = {
+    'bir': 1, 'ikki': 2, 'uch': 3, 'to\'rt': 4, 'besh': 5, 'olti': 6, 'yetti': 7, 'sakkiz': 8, 'to\'qqiz': 9, 'toqqiz': 9,
+    'o\'n': 10, 'on': 10, 'yigirma': 20, 'o\'ttiz': 30, 'ottiz': 30, 'qirq': 40, 'ellik': 50, 'oltmish': 60, 'yetmish': 70, 'sakson': 80, 'to\'qson': 90, 'toqson': 90,
+    'yuz': 100, 'ming': 1000, 'million': 1000000
+  };
+
+  const words = str.toLowerCase().split(/\s+/);
+  let result = [];
+  let currentNumber = 0;
+  let accumulated = 0;
+  let inNumberSequence = false;
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i].replace(/[.,?!()]/g, ""); // Clean formatting punctuation
+    const val = numberWords[word];
+
+    if (val !== undefined) {
+      inNumberSequence = true;
+      if (val === 1000 || val === 1000000) {
+        accumulated += (currentNumber || 1) * val;
+        currentNumber = 0;
+      } else if (val === 100) {
+        currentNumber = (currentNumber || 1) * 100;
+      } else {
+        currentNumber += val;
+      }
+    } else {
+      if (inNumberSequence) {
+        result.push(accumulated + currentNumber);
+        accumulated = 0;
+        currentNumber = 0;
+        inNumberSequence = false;
+      }
+      result.push(words[i]);
+    }
+  }
+
+  if (inNumberSequence) {
+    result.push(accumulated + currentNumber);
+  }
+
+  return result.join(' ');
+}
+
 // Transaction parser from chat message text
 function parseTransactionText(text) {
-  const parts = text.trim().split(/\s+/);
+  // Convert word-based numbers to digits first (e.g. "ellik ming" -> "50000")
+  const preparedText = replaceUzbekNumberWords(text);
+  const parts = preparedText.trim().split(/\s+/);
   if (parts.length === 0) return null;
 
   // Clean the first part to extract amount
@@ -81,6 +130,56 @@ function parseTransactionText(text) {
   };
 }
 
+// Helper to filter out phone/date candidates from OCR text
+function looksLikeDateOrPhone(num) {
+  const str = String(num);
+  if (str.length === 9 || str.length === 12) return true; // Phone formats
+  if (str.startsWith('2025') || str.startsWith('2026')) return true; // Year formats
+  return false;
+}
+
+// Receipt text parser to find final receipt amount
+function parseReceiptAmount(text) {
+  const lines = text.split('\n');
+  const totalKeywords = ['jami', 'summa', 'total', 'itog', 'oplata', 'to\'lov', 'tlov', 'kas', 'kassa', 'xizmat', 'ittogo', 'itogo', 'itg', 'fiş', 'fis'];
+  
+  let candidates = [];
+
+  for (const line of lines) {
+    const lineLower = line.toLowerCase();
+    const matchesKeyword = totalKeywords.some(keyword => lineLower.includes(keyword));
+    
+    if (matchesKeyword) {
+      const matches = line.match(/\b\d+[\s.,]?\d*[\s.,]?\d+\b/g);
+      if (matches) {
+        matches.forEach(m => {
+          const val = parseFloat(m.replace(/[^\d]/g, ''));
+          if (val && val > 100 && val < 50000000) {
+            candidates.push(val);
+          }
+        });
+      }
+    }
+  }
+
+  if (candidates.length > 0) {
+    return Math.max(...candidates);
+  }
+
+  // Fallback: get largest number matching money criteria
+  const allNumbers = text.match(/\b\d+[\s.,]?\d*[\s.,]?\d+\b/g);
+  if (allNumbers) {
+    const vals = allNumbers
+      .map(m => parseFloat(m.replace(/[^\d]/g, '')))
+      .filter(val => val && val > 100 && val < 10000000 && !looksLikeDateOrPhone(val));
+    if (vals.length > 0) {
+      return Math.max(...vals);
+    }
+  }
+
+  return null;
+}
+
 export function initBot() {
   if (!token) return null;
 
@@ -95,12 +194,11 @@ export function initBot() {
 Hisob-kitob botiga xush kelibsiz!
 
 📊 *Mini App:* Pastdagi *'Hisobni Ochish 📊'* tugmasini bosing.
-✍️ *Tezkor hisoblash:* Botga to'g'ridan-to'g'ri yozishingiz ham mumkin!
-   *Masalan:*
-   • \`50000 oziq-ovqat tushlik\` (harajat)
-   • \`+2500000 maosh\` (daromad)
+✍️ *Matn orqali:* \`50000 taksi\` yoki \`+150000 maosh\`
+🎙 *Ovozli yozish:* Ovozli xabar yuborib kiritishingiz ham mumkin! (Masalan: *"Taksi yigirma ming so'm"*)
+📸 *Chek Skaner:* Chek rasmini yuboring, bazaga avtomatik saqlaymiz!
    
-💾 *Zaxira yuklash:* Foydalanuvchi ma'lumotlarini yuklash uchun /backup buyrug'ini bosing.`;
+💾 *Zaxira yuklash:* /backup buyrug'ini bosing.`;
 
     const keyboardButton = Markup.keyboard([
       [Markup.button.webApp('Hisobni Ochish 📊', webAppUrl)]
@@ -127,16 +225,17 @@ Hisob-kitob botiga xush kelibsiz!
     const message = `📋 *Botdan foydalanish bo'yicha yordam:*
 
 1️⃣ *Mini App:* 'Hisobni Ochish' tugmasi yordamida chiroyli diagrammalar va hisobotlarni ko'ring.
-2️⃣ *Tezkor yozish formatlari:*
-   • \`[summa] [kategoriya (ixtiyoriy)] [izoh]\`
-   • Harajat yozish: \`20000 taksi uyga\` (Transportga yoziladi)
-   • Daromad yozish: \`+150000 sovg'a do'stimdan\` (Daromadga yoziladi)
-3️⃣ *Zaxiralash:* Ma'lumotlarni yuklash uchun /backup buyrug'ini yuboring.`;
+2️⃣ *Matn va Ovoz formatlari:*
+   • Ovozli xabarni yuboring: *"Taksi ellik ming so'm uyga"*
+   • Matnli xabarni yuboring: \`50000 taksi\`
+3️⃣ *Cheklarni skanerlash:*
+   • Chek rasmini (photo) to'g'ridan-to'g'ri botga yuboring. Matn skanerlanib, summasi harajatga yoziladi.
+4️⃣ *Zaxira:* Ma'lumotlarni yuklash uchun /backup buyrug'ini yuboring.`;
     
     ctx.replyWithMarkdownV2(escapeMarkdown(message));
   });
 
-  // Backup command - Sends transactions file as JSON document
+  // Backup command
   bot.command('backup', async (ctx) => {
     const userId = String(ctx.from.id);
     try {
@@ -167,17 +266,205 @@ Hisob-kitob botiga xush kelibsiz!
     }
   });
 
-  // Handle all other text messages (Direct logging)
+  // Handle voice messages (Speech-to-Text via Hugging Face Whisper API)
+  bot.on('voice', async (ctx) => {
+    const voice = ctx.message.voice;
+    const fileId = voice.file_id;
+    const userId = String(ctx.from.id);
+
+    const progressMsg = await ctx.reply("🎙 Ovozli xabar eshitilmoqda, tahlil qilinmoqda...");
+
+    try {
+      const hfToken = process.env.HUGGINGFACE_TOKEN;
+      if (!hfToken) {
+        return ctx.telegram.editMessageText(
+          ctx.chat.id,
+          progressMsg.message_id,
+          null,
+          "⚠️ Ovozli xabarlar bilan ishlash uchun HUGGINGFACE_TOKEN o'rnatilishi shart. O'rnatish yo'riqnomasi uchun /help buyrug'ini bosing."
+        );
+      }
+
+      // Download file stream
+      const fileLink = await ctx.telegram.getFileLink(fileId);
+      const audioRes = await fetch(fileLink.href);
+      const audioBuffer = await audioRes.arrayBuffer();
+
+      // Submit to Hugging Face Whisper Large v3
+      const hfRes = await fetch(
+        "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+        {
+          headers: {
+            Authorization: `Bearer ${hfToken}`,
+            "Content-Type": "audio/ogg"
+          },
+          method: "POST",
+          body: audioBuffer
+        }
+      );
+
+      if (!hfRes.ok) {
+        const errJson = await hfRes.json().catch(() => ({}));
+        throw new Error(errJson.error || `Hugging Face returned status ${hfRes.status}`);
+      }
+
+      const hfData = await hfRes.json();
+      const transcribedText = hfData.text || "";
+
+      if (!transcribedText.trim()) {
+        return ctx.telegram.editMessageText(
+          ctx.chat.id,
+          progressMsg.message_id,
+          null,
+          "🎙 Ovozli xabardan hech narsa tushunib bo'lmadi. Iltimos, aniqroq va balandroq gapiring."
+        );
+      }
+
+      const parsed = parseTransactionText(transcribedText);
+      if (!parsed) {
+        return ctx.telegram.editMessageText(
+          ctx.chat.id,
+          progressMsg.message_id,
+          null,
+          `🎙 *Eshitildi:* "${transcribedText}"\n\n⚠️ Matndan xarajat miqdori (summasi) aniqlanmadi. Masalan: "ellik ming non" yoki "taksi o'ttiz ming" deb gapiring.`
+        );
+      }
+
+      const tx = await db.addTransaction(userId, parsed);
+      const formattedAmount = new Intl.NumberFormat('uz-UZ').format(tx.amount);
+      const settings = await db.getSettings(userId);
+      const currency = settings.currency || 'UZS';
+
+      const typeLabel = tx.type === 'income' ? '🟢 Daromad' : '🔴 Harajat';
+      
+      const successMessage = `🎙 *Ovozli xabar saqlandi!*
+💬 *Eshitildi:* "${transcribedText}"
+
+📌 *Turi:* ${typeLabel}
+💰 *Miqdor:* ${formattedAmount} ${currency}
+🗂 *Kategoriya:* ${tx.category === 'Maosh' ? 'Daromad' : tx.category}
+📝 *Izoh:* ${tx.description || '-'}`;
+
+      await ctx.telegram.editMessageText(
+        ctx.chat.id,
+        progressMsg.message_id,
+        null,
+        escapeMarkdown(successMessage),
+        { parse_mode: 'MarkdownV2' }
+      );
+
+      // Check budget limits
+      if (tx.type === 'expense') {
+        const stats = await db.getStats(userId);
+        if (stats.budget > 0 && stats.totalExpense > stats.budget) {
+          const warningMessage = `🚨 *OGOHLANTIRISH! (Byudjet Limiti)*
+Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(stats.budget)} ${currency}) oshib ketdi!
+📈 *Joriy oylik harajatlar:* ${new Intl.NumberFormat('uz-UZ').format(stats.totalExpense)} ${currency}`;
+          
+          setTimeout(() => {
+            ctx.replyWithMarkdownV2(escapeMarkdown(warningMessage)).catch(e => console.error(e));
+          }, 1000);
+        }
+      }
+
+    } catch (error) {
+      console.error('Speech-to-Text error:', error);
+      ctx.telegram.editMessageText(
+        ctx.chat.id,
+        progressMsg.message_id,
+        null,
+        "❌ Ovozli xabarni tahlil qilishda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
+      );
+    }
+  });
+
+  // Handle photo uploads (Receipt scanning OCR)
+  bot.on('photo', async (ctx) => {
+    const photo = ctx.message.photo;
+    const fileId = photo[photo.length - 1].file_id; // Max resolution
+    const userId = String(ctx.from.id);
+
+    const progressMsg = await ctx.reply("📸 Chek rasmi qabul qilindi. Matn skanerlanmoqda...");
+
+    try {
+      const fileLink = await ctx.telegram.getFileLink(fileId);
+      
+      // Perform OCR
+      const worker = await createWorker('eng+rus');
+      const { data: { text } } = await worker.recognize(fileLink.href);
+      await worker.terminate();
+
+      const amount = parseReceiptAmount(text);
+
+      if (!amount || amount <= 0) {
+        return ctx.telegram.editMessageText(
+          ctx.chat.id,
+          progressMsg.message_id,
+          null,
+          "📸 Chekdan summa aniqlanmadi. Iltimos rasmni aniqroq qilib yuboring yoki xarajatni matn ko'rinishida yozing."
+        );
+      }
+
+      const tx = await db.addTransaction(userId, {
+        amount,
+        type: 'expense',
+        category: 'Boshqa',
+        description: 'Chek skaneri orqali'
+      });
+
+      const formattedAmount = new Intl.NumberFormat('uz-UZ').format(tx.amount);
+      const settings = await db.getSettings(userId);
+      const currency = settings.currency || 'UZS';
+
+      const successMessage = `📸 *Chek muvaffaqiyatli saqlandi!*
+
+🔴 *Turi:* Harajat
+💰 *Miqdor:* ${formattedAmount} ${currency}
+🗂 *Kategoriya:* Boshqa
+📝 *Izoh:* Chek skaneri orqali`;
+
+      await ctx.telegram.editMessageText(
+        ctx.chat.id,
+        progressMsg.message_id,
+        null,
+        escapeMarkdown(successMessage),
+        { parse_mode: 'MarkdownV2' }
+      );
+
+      // Check budget
+      if (tx.type === 'expense') {
+        const stats = await db.getStats(userId);
+        if (stats.budget > 0 && stats.totalExpense > stats.budget) {
+          const warningMessage = `🚨 *OGOHLANTIRISH! (Byudjet Limiti)*
+Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(stats.budget)} ${currency}) oshib ketdi!
+📈 *Joriy oylik harajatlar:* ${new Intl.NumberFormat('uz-UZ').format(stats.totalExpense)} ${currency}`;
+          
+          setTimeout(() => {
+            ctx.replyWithMarkdownV2(escapeMarkdown(warningMessage)).catch(e => console.error(e));
+          }, 1000);
+        }
+      }
+
+    } catch (error) {
+      console.error('Receipt OCR error:', error);
+      ctx.telegram.editMessageText(
+        ctx.chat.id,
+        progressMsg.message_id,
+        null,
+        "❌ Chek rasmini skanerlashda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
+      );
+    }
+  });
+
+  // Handle all other text messages (Direct text logging)
   bot.on('text', async (ctx) => {
     const text = ctx.message.text;
     const userId = String(ctx.from.id);
 
-    // Skip commands (e.g. starting with /)
     if (text.startsWith('/')) return;
 
     const parsed = parseTransactionText(text);
     if (!parsed) {
-      // If it doesn't look like a transaction entry, remind the user about format
       return ctx.reply("Tushunarsiz format. Harajat yozish uchun masalan: '50000 taksi' yoki daromad uchun '+100000 maosh' ko'rinishida yuboring. Yordam uchun /help bosing.");
     }
 
@@ -200,22 +487,13 @@ Hisoblarni ko'rish uchun Mini App-ni oching!`;
 
       await ctx.replyWithMarkdownV2(escapeMarkdown(successMessage));
 
-      // Check if it is an expense and triggers budget alarm
       if (tx.type === 'expense') {
         const stats = await db.getStats(userId);
         if (stats.budget > 0 && stats.totalExpense > stats.budget) {
-          const formattedExpense = new Intl.NumberFormat('uz-UZ').format(stats.totalExpense);
-          const formattedBudget = new Intl.NumberFormat('uz-UZ').format(stats.budget);
-          
           const warningMessage = `🚨 *OGOHLANTIRISH! (Byudjet Limiti)*
-Siz belgilagan oylik harajatlar limiti (${formattedBudget} ${currency}) oshib ketdi!
-
-📊 *Joriy oylik harajatlar:* ${formattedExpense} ${currency}
-💸 *Oshib ketgan summa:* ${new Intl.NumberFormat('uz-UZ').format(stats.totalExpense - stats.budget)} ${currency}
-
-Iltimos, harajatlarni nazorat qiling! 📉`;
+Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(stats.budget)} ${currency}) oshib ketdi!
+📈 *Joriy oylik harajatlar:* ${new Intl.NumberFormat('uz-UZ').format(stats.totalExpense)} ${currency}`;
           
-          // Send notification with a slight delay
           setTimeout(() => {
             ctx.replyWithMarkdownV2(escapeMarkdown(warningMessage)).catch(e => console.error(e));
           }, 1000);
@@ -237,14 +515,13 @@ Iltimos, harajatlarni nazorat qiling! 📉`;
     .then(() => console.log('🚀 Telegram Bot muvaffaqiyatli ishga tushdi!'))
     .catch((err) => console.error('❌ Telegram Botni ishga tushirishda xato:', err.message));
 
-  // Enable graceful stop
   process.once('SIGINT', () => bot && bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot && bot.stop('SIGTERM'));
 
   return bot;
 }
 
-// Programmatic alert sender for budget overflows (triggered by WebApp API calls)
+// Programmatic alert sender
 export async function sendBudgetAlert(userId, totalExpense, budget, currency) {
   if (!bot) return;
   try {

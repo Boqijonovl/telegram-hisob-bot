@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -13,7 +13,9 @@ import {
   Gift, 
   Coins, 
   HelpCircle,
-  AlertTriangle
+  AlertTriangle,
+  Search,
+  Zap
 } from 'lucide-react';
 
 // Map categories to appropriate Lucide icons and colors
@@ -33,11 +35,36 @@ export const getCategoryConfig = (categoryName) => {
   return configs[categoryName] || configs['Boshqa'];
 };
 
-function Dashboard({ transactions, stats, currency, formatAmount, onDelete }) {
+const QUICK_TEMPLATES = [
+  { label: '🍞 Non', amount: 4000, type: 'expense', category: 'Oziq-ovqat', desc: 'Non xaridi' },
+  { label: '🚕 Taksi', amount: 15000, type: 'expense', category: 'Transport', desc: 'Taksi yo\'lkira' },
+  { label: '☕ Kofe', amount: 18000, type: 'expense', category: 'Oziq-ovqat', desc: 'Kofe' },
+  { label: '🍛 Tushlik', amount: 45000, type: 'expense', category: 'Oziq-ovqat', desc: 'Tushlik ovqat' },
+  { label: '💼 Oylik', amount: 5000000, type: 'income', category: 'Daromad', desc: 'Oylik maosh' },
+  { label: '🎬 Kino', amount: 35000, type: 'expense', category: 'Ko\'ngilochar', desc: 'Kino chipta' }
+];
+
+function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAdd }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Barchasi');
+
   // Budget calculations
   const budgetProgress = stats.budget > 0 ? (stats.totalExpense / stats.budget) * 100 : 0;
   const isBudgetExceeded = stats.budget > 0 && stats.totalExpense > stats.budget;
   const budgetRemaining = stats.budget - stats.totalExpense;
+
+  // Filter transactions dynamically based on search and category filters
+  const filteredTransactions = transactions.filter(tx => {
+    const matchesSearch = 
+      (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (tx.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Map database 'Daromad' category to UI select
+    const displayCategory = tx.category === 'Daromad' ? 'Daromad' : tx.category;
+    const matchesCategory = selectedCategory === 'Barchasi' || displayCategory === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const formatDate = (isoString) => {
     const date = new Date(isoString);
@@ -47,6 +74,18 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete }) {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  const handleQuickTemplateClick = (tmpl) => {
+    if (onAdd) {
+      onAdd({
+        amount: tmpl.amount,
+        type: tmpl.type,
+        category: tmpl.category,
+        description: tmpl.desc,
+        date: new Date().toISOString()
+      });
+    }
   };
 
   return (
@@ -77,6 +116,29 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete }) {
               <p className="stat-val">-{formatAmount(stats.totalExpense)}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Templates Panel */}
+      <div className="quick-templates-section">
+        <div className="section-title-bar" style={{ marginTop: 0, marginBottom: '8px' }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--hint-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ⚡ Tezkor shablonlar
+          </h4>
+        </div>
+        <div className="quick-templates-list">
+          {QUICK_TEMPLATES.map((tmpl, idx) => (
+            <button 
+              key={idx} 
+              onClick={() => handleQuickTemplateClick(tmpl)}
+              className="quick-template-pill"
+            >
+              <span className="tmpl-label">{tmpl.label}</span>
+              <span className="tmpl-amount">
+                {tmpl.type === 'income' ? '+' : ''}{formatAmount(tmpl.amount)}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -117,20 +179,50 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete }) {
         </div>
       )}
 
-      {/* Recent Transactions Section */}
-      <div className="section-title-bar">
-        <h3>So'nggi operatsiyalar</h3>
+      {/* Search & Category Filter Section */}
+      <div className="search-filter-section">
+        <div className="search-input-wrapper">
+          <Search size={16} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="Operatsiyalardan qidirish..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="category-pills-list">
+          {['Barchasi', 'Oziq-ovqat', 'Transport', 'Kommunal', 'Xaridlar', 'Ko\'ngilochar', 'Sog\'liqni saqlash', 'Ta\'lim', 'Sovg\'alar', 'Daromad', 'Boshqa'].map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {transactions.length === 0 ? (
+      {/* Recent Transactions Section */}
+      <div className="section-title-bar">
+        <h3>Operatsiyalar tarixi</h3>
+      </div>
+
+      {filteredTransactions.length === 0 ? (
         <div className="empty-state">
           <Coins className="empty-state-icon" />
-          <h4>Hech qanday ma'lumot yo'q</h4>
-          <p>Operatsiyalarni qo'shish uchun pastdagi "+" tugmasini bosing</p>
+          <h4>Hech qanday operatsiya topilmadi</h4>
+          <p>
+            {searchQuery || selectedCategory !== 'Barchasi' 
+              ? "Qidiruv shartlariga mos keladigan operatsiya mavjud emas." 
+              : "Operatsiyalarni qo'shish uchun pastdagi '+' tugmasini bosing."}
+          </p>
         </div>
       ) : (
         <div className="transaction-list">
-          {transactions.map((tx) => {
+          {filteredTransactions.map((tx) => {
             const config = getCategoryConfig(tx.category);
             const IconComponent = config.icon;
             

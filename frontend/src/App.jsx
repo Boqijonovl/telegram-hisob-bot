@@ -302,6 +302,7 @@ function App() {
               currency={settings.currency}
               formatAmount={formatAmount}
               onDelete={handleDeleteTransaction}
+              onAdd={handleAddTransaction}
             />
           )}
 
