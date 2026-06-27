@@ -873,3 +873,144 @@ body {
   color: var(--button-text-color);
   border-color: var(--button-color);
 }
+
+/* --- VIP UI/UX Styles --- */
+
+/* Ambient Glowing Background Blobs */
+.ambient-glow-1 {
+  position: fixed;
+  top: -10%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(2, 132, 199, 0.12) 0%, rgba(0,0,0,0) 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+  animation: floatGlow1 25s infinite alternate ease-in-out;
+}
+
+.ambient-glow-2 {
+  position: fixed;
+  bottom: -10%;
+  right: -10%;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0,0,0,0) 70%);
+  filter: blur(50px);
+  z-index: -1;
+  pointer-events: none;
+  animation: floatGlow2 30s infinite alternate ease-in-out;
+}
+
+@keyframes floatGlow1 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(60px, 40px) scale(1.2); }
+}
+
+@keyframes floatGlow2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-80px, -50px) scale(1.1); }
+}
+
+/* Custom simulated amount input display */
+.amount-input-display {
+  width: 100%;
+  min-height: 58px;
+  border-bottom: 2px solid var(--card-border);
+  color: var(--text-color);
+  font-weight: 800;
+  text-align: center;
+  padding: 8px 0;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: font-size var(--transition-fast);
+}
+
+/* Custom iOS-style Numpad */
+.ios-numpad-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.01);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--card-border);
+}
+
+.numpad-key-btn {
+  background-color: var(--secondary-bg-color);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  height: 54px;
+  border-radius: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.numpad-key-btn:active {
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.backspace-key {
+  color: var(--expense-color);
+}
+
+/* Category Jump Pop animation */
+@keyframes popJump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22) translateY(-4px); }
+  100% { transform: scale(1); }
+}
+
+.pop-active .category-icon-box {
+  animation: popJump 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Swipe-to-delete container and background styles */
+.swipe-item-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  background-color: var(--expense-color);
+}
+
+.swipe-delete-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 80px;
+  background-color: var(--expense-color);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.swipe-front {
+  position: relative;
+  z-index: 2;
+  background-color: var(--card-bg);
+}

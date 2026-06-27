@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Delete } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
 const EXPENSE_CATEGORIES = [
@@ -21,23 +21,17 @@ const INCOME_CATEGORIES = [
   'Boshqa'
 ];
 
+const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'];
+
 function AddTransaction({ onClose, onSubmit, currency }) {
-  const [type, setType] = useState('expense'); // 'expense' or 'income'
+  const [type, setType] = useState('expense'); 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Oziq-ovqat');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().substring(0, 10)); // YYYY-MM-DD
-  
-  const amountRef = useRef(null);
+  const [date, setDate] = useState(new Date().toISOString().substring(0, 10)); 
+  const [clickedCategory, setClickedCategory] = useState(null);
 
-  // Auto-focus amount field on mount
-  useEffect(() => {
-    if (amountRef.current) {
-      amountRef.current.focus();
-    }
-  }, []);
-
-  // Update category default when type changes
+  // Update default category when switching expense/income
   useEffect(() => {
     if (type === 'expense') {
       setCategory('Oziq-ovqat');
@@ -47,6 +41,7 @@ function AddTransaction({ onClose, onSubmit, currency }) {
   }, [type]);
 
   const handleTypeChange = (newType) => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
     setType(newType);
   };
 
@@ -58,18 +53,59 @@ function AddTransaction({ onClose, onSubmit, currency }) {
       return;
     }
 
-    // Submit payload
     onSubmit({
       amount: parsedAmount,
       type,
-      // If income, map custom income category, otherwise use expense category
       category: type === 'income' && category === 'Maosh' ? 'Daromad' : category,
       description: description.trim(),
       date: new Date(date).toISOString()
     });
   };
 
-  // Selectable categories depending on the transaction type
+  // Custom iOS Numpad key tap logic
+  const handleKeyClick = (key) => {
+    // Standard haptic light vibration on keypress
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+
+    if (key === 'backspace') {
+      setAmount(prev => prev.slice(0, -1));
+      return;
+    }
+
+    if (key === '.') {
+      if (amount.includes('.')) return;
+      if (amount === '') {
+        setAmount('0.');
+        return;
+      }
+    }
+
+    if (amount.length >= 11) return; // Prevent layout overflows
+
+    if (amount === '0' && key === '0') return;
+    if (amount === '0' && key !== '.') {
+      setAmount(key);
+      return;
+    }
+
+    setAmount(prev => prev + key);
+  };
+
+  const handleCategoryClick = (catName) => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    setClickedCategory(catName);
+    setCategory(catName);
+    setTimeout(() => setClickedCategory(null), 250); // Duration matches CSS bounce animation
+  };
+
+  // Auto-scaling font size logic based on character length
+  const getAmountFontSize = () => {
+    const len = amount.length;
+    if (len < 6) return '38px';
+    if (len < 9) return '28px';
+    return '22px';
+  };
+
   const categoriesList = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   return (
@@ -101,37 +137,33 @@ function AddTransaction({ onClose, onSubmit, currency }) {
             </button>
           </div>
 
-          {/* Amount input */}
+          {/* Amount input displaying simulated text input with dynamic scaling */}
           <div className="amount-input-wrapper">
-            <input
-              ref={amountRef}
-              type="number"
-              inputMode="decimal"
-              className="amount-input"
-              placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+            <div 
+              className="amount-input-display"
+              style={{ fontSize: getAmountFontSize() }}
+            >
+              {amount || '0'}
+            </div>
             <span className="amount-currency">{currency}</span>
           </div>
 
-          {/* Category Selection */}
+          {/* Category Selection Grid */}
           <div className="form-group">
             <label className="form-label">Kategoriya tanlang</label>
             <div className="category-grid">
               {categoriesList.map((cat) => {
-                // If it is Salary/Maosh, map to Daromad styling config
                 const displayCategory = type === 'income' && cat === 'Maosh' ? 'Daromad' : cat;
                 const config = getCategoryConfig(displayCategory);
                 const IconComponent = config.icon;
                 const isSelected = category === cat;
+                const isPopping = clickedCategory === cat;
 
                 return (
                   <div
                     key={cat}
-                    className={`category-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setCategory(cat)}
+                    className={`category-item ${isSelected ? 'selected' : ''} ${isPopping ? 'pop-active' : ''}`}
+                    onClick={() => handleCategoryClick(cat)}
                   >
                     <div className="category-icon-box" style={{ 
                       backgroundColor: isSelected ? 'var(--button-color)' : config.bg, 
@@ -171,6 +203,23 @@ function AddTransaction({ onClose, onSubmit, currency }) {
               />
               <Calendar size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--hint-color)', pointerEvents: 'none' }} />
             </div>
+          </div>
+
+          {/* Custom iOS-style Numpad Grid */}
+          <div className="ios-numpad-container">
+            {NUMPAD_KEYS.map((key) => {
+              const isBackspace = key === 'backspace';
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleKeyClick(key)}
+                  className={`numpad-key-btn ${isBackspace ? 'backspace-key' : ''}`}
+                >
+                  {isBackspace ? <Delete size={20} /> : key}
+                </button>
+              );
+            })}
           </div>
 
           {/* Submit */}

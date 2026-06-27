@@ -39,6 +39,14 @@ function App() {
         tg.ready();
         tg.expand();
         
+        // Match header and system backgrounds with the app theme
+        if (tg.setHeaderColor) {
+          tg.setHeaderColor(tg.themeParams?.bg_color || '#0f172a');
+        }
+        if (tg.setBackgroundColor) {
+          tg.setBackgroundColor(tg.themeParams?.bg_color || '#0f172a');
+        }
+
         // Apply Telegram theme colors if provided
         if (tg.themeParams && tg.themeParams.bg_color) {
           document.documentElement.style.setProperty('--bg-color', tg.themeParams.bg_color);
@@ -134,11 +142,13 @@ function App() {
 
       showToast(txData.type === 'income' ? 'Daromad qo\'shildi' : 'Harajat qo\'shildi');
       setShowAddModal(false);
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       
       // Refresh database records
       await fetchData();
     } catch (error) {
       console.error('Error adding transaction:', error);
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
       showToast(error.message, 'error');
     }
   };
@@ -175,9 +185,11 @@ function App() {
       }
 
       showToast('Operatsiya o\'chirildi');
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       await fetchData();
     } catch (error) {
       console.error('Error deleting transaction:', error);
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
       showToast(error.message, 'error');
     }
   };
@@ -257,6 +269,10 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Ambient Glow Bubbles */}
+      <div className="ambient-glow-1"></div>
+      <div className="ambient-glow-2"></div>
+
       {/* Toast Alert */}
       {toast && (
         <div className={`toast-msg ${toast.type}`}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,8 +14,7 @@ import {
   Coins, 
   HelpCircle,
   AlertTriangle,
-  Search,
-  Zap
+  Search
 } from 'lucide-react';
 
 // Map categories to appropriate Lucide icons and colors
@@ -44,9 +43,140 @@ const QUICK_TEMPLATES = [
   { label: '🎬 Kino', amount: 35000, type: 'expense', category: 'Ko\'ngilochar', desc: 'Kino chipta' }
 ];
 
+// Odometer animated counter for financial figures
+function AnimatedCounter({ value, duration = 800 }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = parseFloat(value) || 0;
+    if (start === end) {
+      setCount(end);
+      return;
+    }
+
+    const totalMiliseconds = duration;
+    const incrementTime = 25; // Update every 25ms
+    const totalSteps = totalMiliseconds / incrementTime;
+    const increment = (end - start) / totalSteps;
+
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      start += increment;
+      if (currentStep >= totalSteps) {
+        clearInterval(timer);
+        setCount(end);
+      } else {
+        setCount(Math.floor(start));
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return new Intl.NumberFormat('uz-UZ').format(count);
+}
+
+// Swipe-to-delete item wrapper
+function TransactionItem({ tx, currency, formatAmount, onDelete }) {
+  const [startX, setStartX] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const [isSwiped, setIsSwiped] = useState(false);
+
+  const handleTouchStart = (e) => {
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    const currentX = e.touches[0].clientX;
+    let diff = currentX - startX;
+
+    if (isSwiped) {
+      diff -= 80;
+    }
+
+    // Only allow left swiping
+    if (diff < 0) {
+      setOffsetX(Math.max(diff, -100));
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (offsetX < -45) {
+      setOffsetX(-80);
+      setIsSwiped(true);
+      // Native light haptic feedback on swipe snap
+      window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    } else {
+      setOffsetX(0);
+      setIsSwiped(false);
+    }
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    onDelete(tx.id);
+  };
+
+  const config = getCategoryConfig(tx.category);
+  const IconComponent = config.icon;
+  
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('uz-UZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  return (
+    <div className="swipe-item-container">
+      {/* Background red delete box */}
+      <div onClick={handleDeleteClick} className="swipe-delete-action">
+        <Trash2 size={18} />
+        <span>O'chirish</span>
+      </div>
+
+      {/* Slideable transaction card */}
+      <div 
+        className="transaction-card swipe-front"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          transform: `translateX(${offsetX}px)`, 
+          transition: offsetX === 0 || offsetX === -80 ? 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+        }}
+      >
+        <div className="tx-left">
+          <div className="tx-icon-wrapper" style={{ backgroundColor: config.bg, color: config.color }}>
+            <IconComponent size={20} />
+          </div>
+          <div className="tx-details">
+            <h4>{tx.description || tx.category}</h4>
+            <p>{formatDate(tx.date)}</p>
+          </div>
+        </div>
+        <div className="tx-right">
+          <span className={`tx-amount ${tx.type}`}>
+            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {currency}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAdd }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Barchasi');
+  const [tiltStyle, setTiltStyle] = useState({});
+  const cardRef = useRef(null);
 
   // Budget calculations
   const budgetProgress = stats.budget > 0 ? (stats.totalExpense / stats.budget) * 100 : 0;
@@ -59,24 +189,57 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
       (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
       (tx.category || '').toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Map database 'Daromad' category to UI select
     const displayCategory = tx.category === 'Daromad' ? 'Daromad' : tx.category;
     const matchesCategory = selectedCategory === 'Barchasi' || displayCategory === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
 
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('uz-UZ', { 
-      day: 'numeric', 
-      month: 'long', 
-      hour: '2-digit', 
-      minute: '2-digit' 
+  // 3D Parallax Card Tilt handlers
+  const handleMouseMove = (e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+
+    const rotateX = -(y / (rect.height / 2)) * 12; 
+    const rotateY = (x / (rect.width / 2)) * 12;
+
+    setTiltStyle({
+      transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
+      transition: 'transform 0.1s ease'
+    });
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = touch.clientX - rect.left - rect.width / 2;
+    const y = touch.clientY - rect.top - rect.height / 2;
+
+    const rotateX = -(y / (rect.height / 2)) * 10;
+    const rotateY = (x / (rect.width / 2)) * 10;
+
+    setTiltStyle({
+      transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
+      transition: 'transform 0.1s ease'
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTiltStyle({
+      transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+      transition: 'transform 0.4s ease-out'
     });
   };
 
   const handleQuickTemplateClick = (tmpl) => {
+    // Trigger Telegram haptic click
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
     if (onAdd) {
       onAdd({
         amount: tmpl.amount,
@@ -90,11 +253,19 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Balance Card */}
-      <div className="balance-card">
+      {/* 3D Parallax Balance Card */}
+      <div 
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseLeave}
+        className="balance-card" 
+        style={tiltStyle}
+      >
         <p className="balance-title">Umumiy balans</p>
         <h1 className="balance-amount">
-          {formatAmount(stats.balance)} <span>{currency}</span>
+          <AnimatedCounter value={stats.balance} /> <span>{currency}</span>
         </h1>
         
         <div className="stats-grid">
@@ -104,7 +275,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
             </div>
             <div>
               <p className="stat-label">Daromad</p>
-              <p className="stat-val">+{formatAmount(stats.totalIncome)}</p>
+              <p className="stat-val">+<AnimatedCounter value={stats.totalIncome} /></p>
             </div>
           </div>
           <div className="stat-item">
@@ -113,7 +284,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
             </div>
             <div>
               <p className="stat-label">Harajat</p>
-              <p className="stat-val">-{formatAmount(stats.totalExpense)}</p>
+              <p className="stat-val">-<AnimatedCounter value={stats.totalExpense} /></p>
             </div>
           </div>
         </div>
@@ -222,36 +393,15 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
         </div>
       ) : (
         <div className="transaction-list">
-          {filteredTransactions.map((tx) => {
-            const config = getCategoryConfig(tx.category);
-            const IconComponent = config.icon;
-            
-            return (
-              <div key={tx.id} className="transaction-card">
-                <div className="tx-left">
-                  <div className="tx-icon-wrapper" style={{ backgroundColor: config.bg, color: config.color }}>
-                    <IconComponent size={20} />
-                  </div>
-                  <div className="tx-details">
-                    <h4>{tx.description || tx.category}</h4>
-                    <p>{formatDate(tx.date)}</p>
-                  </div>
-                </div>
-                <div className="tx-right">
-                  <span className={`tx-amount ${tx.type}`}>
-                    {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {currency}
-                  </span>
-                  <button 
-                    onClick={() => onDelete(tx.id)} 
-                    className="tx-delete-btn"
-                    title="O'chirish"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {filteredTransactions.map((tx) => (
+            <TransactionItem 
+              key={tx.id} 
+              tx={tx} 
+              currency={currency} 
+              formatAmount={formatAmount} 
+              onDelete={onDelete} 
+            />
+          ))}
         </div>
       )}
     </div>
