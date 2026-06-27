@@ -2,6 +2,7 @@ import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
 import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -321,10 +322,10 @@ Hisob-kitob botiga xush kelibsiz!
       let audioBuffer;
       try {
         const fileLink = await ctx.telegram.getFileLink(fileId);
-        const audioRes = await fetch(fileLink.href);
-        audioBuffer = await audioRes.arrayBuffer();
+        const audioRes = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
+        audioBuffer = audioRes.data;
       } catch (err) {
-        throw new Error(`Telegram API dan fayl yuklashda xatolik: ${err.cause ? err.cause.message : err.message}`);
+        throw new Error(`Telegram API dan fayl yuklashda xatolik: ${err.message}`);
       }
 
       // Submit to Hugging Face Whisper Large v3 (with retry logic for 503 service loading)
@@ -334,28 +335,28 @@ Hisob-kitob botiga xush kelibsiz!
       while (retries > 0) {
         let hfRes;
         try {
-          hfRes = await fetch(
+          hfRes = await axios.post(
             "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+            Buffer.from(audioBuffer),
             {
               headers: {
                 Authorization: `Bearer ${hfToken}`,
                 "Content-Type": "audio/ogg"
               },
-              method: "POST",
-              body: Buffer.from(audioBuffer)
+              validateStatus: () => true // Handle all HTTP statuses manually
             }
           );
         } catch (err) {
-          throw new Error(`HuggingFace serveriga ulanishda xatolik: ${err.cause ? err.cause.message : err.message}`);
+          throw new Error(`HuggingFace serveriga ulanishda xatolik: ${err.message}`);
         }
 
-        if (hfRes.ok) {
-          const hfData = await hfRes.json();
+        if (hfRes.status === 200) {
+          const hfData = hfRes.data;
           transcribedText = hfData.text || "";
           break; // successfully transcribed!
         }
 
-        const errJson = await hfRes.json().catch(() => ({}));
+        const errJson = hfRes.data || {};
         
         // Handle 503 model currently loading state
         if (hfRes.status === 503 && errJson.estimated_time) {
