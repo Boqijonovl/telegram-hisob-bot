@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Trash2, 
-  Utensils, 
+  Apple, 
   Car, 
   Home, 
   ShoppingBag, 
-  Tv, 
-  HeartPulse, 
-  GraduationCap, 
+  Gamepad2, 
+  Coffee, 
+  Wallet, 
+  Briefcase, 
   Gift, 
-  Coins, 
   HelpCircle,
   AlertTriangle,
   Search,
@@ -17,16 +17,17 @@ import {
   TrendingDown
 } from 'lucide-react';
 
-// Map categories to appropriate Lucide icons and colors
+// Map categories to appropriate Lucide icons and colors (Modern & Specific)
 export const getCategoryConfig = (categoryName) => {
   const configs = {
-    'Oziq-ovqat': { icon: Utensils, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+    'Oziq-ovqat': { icon: Apple, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
     'Transport': { icon: Car, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
     'Kommunal': { icon: Home, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
     'Xaridlar': { icon: ShoppingBag, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' },
-    'Ko\'ngilochar': { icon: Tv, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
-    'Sog\'liqni saqlash': { icon: HeartPulse, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
-    'Ta\'lim': { icon: GraduationCap, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
+    'Ko\'ngilochar': { icon: Gamepad2, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+    'Kafe': { icon: Coffee, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.12)' },
+    'Maosh': { icon: Wallet, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+    'Biznes': { icon: Briefcase, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
     'Sovg\'alar': { icon: Gift, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
     'Daromad': { icon: TrendingUp, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
     'Boshqa': { icon: HelpCircle, color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
@@ -116,7 +117,7 @@ const groupTransactionsByDay = (txList) => {
 };
 
 // Swipe-to-delete item wrapper
-function TransactionItem({ tx, currency, formatAmount, onDelete, t }) {
+function TransactionItem({ tx, formatAmount, onDelete, t }) {
   const [startX, setStartX] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isSwiped, setIsSwiped] = useState(false);
@@ -215,7 +216,7 @@ function TransactionItem({ tx, currency, formatAmount, onDelete, t }) {
             fontWeight: '900', 
             color: tx.type === 'income' ? 'var(--income-color)' : 'var(--text-color)' 
           }}>
-            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {currency}
+            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {t.currencySymbol}
           </span>
         </div>
       </div>
@@ -223,7 +224,7 @@ function TransactionItem({ tx, currency, formatAmount, onDelete, t }) {
   );
 }
 
-function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAdd, t, lang }) {
+function Dashboard({ transactions, stats, formatAmount, onDelete, onAdd, t, lang }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Barchasi');
   const [tiltStyle, setTiltStyle] = useState({});
@@ -308,7 +309,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
           <div style={{ position: 'relative', zIndex: 2 }}>
             <span className="card-label">{t.totalBalance}</span>
             <h1 className="card-balance">
-              <AnimatedCounter value={stats.balance} /> <span style={{ fontSize: '20px', fontWeight: '800' }}>{currency}</span>
+              <AnimatedCounter value={stats.balance} /> <span style={{ fontSize: '20px', fontWeight: '800' }}>{t.currencySymbol}</span>
             </h1>
             
             {/* Minimal Neon Glow Highlight bar inside card */}
@@ -344,7 +345,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
             </span>
           </div>
           <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--income-color)' }}>
-            +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{currency}</span>
+            +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{t.currencySymbol}</span>
           </h2>
         </div>
 
@@ -358,7 +359,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
             </span>
           </div>
           <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--expense-color)' }}>
-            -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{currency}</span>
+            -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{t.currencySymbol}</span>
           </h2>
         </div>
       </div>
@@ -380,7 +381,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
               </span>
             </div>
             <span style={{ fontSize: '12px', fontWeight: '900', color: isBudgetExceeded ? 'var(--expense-color)' : 'var(--income-color)' }}>
-              {isBudgetExceeded ? '-' : ''}{formatAmount(Math.abs(budgetRemaining))} {currency}
+              {isBudgetExceeded ? '-' : ''}{formatAmount(Math.abs(budgetRemaining))} {t.currencySymbol}
             </span>
           </div>
           
@@ -395,8 +396,8 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--hint-color)', marginTop: '6px' }}>
-            <span>{formatAmount(stats.totalExpense)} {currency}</span>
-            <span>{t.budget}: {formatAmount(stats.budget)} {currency}</span>
+            <span>{formatAmount(stats.totalExpense)} {t.currencySymbol}</span>
+            <span>{t.budget}: {formatAmount(stats.budget)} {t.currencySymbol}</span>
           </div>
         </div>
       )}
@@ -438,7 +439,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
       <div className="transactions-list">
         {groupedDays.length === 0 ? (
           <div className="empty-state">
-            <Coins className="empty-state-icon" style={{ opacity: 0.2 }} />
+            <TrendingUp className="empty-state-icon" style={{ opacity: 0.2 }} />
             <p>{t.noTransactions}</p>
           </div>
         ) : (
@@ -459,7 +460,6 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
                   <TransactionItem 
                     key={tx.id} 
                     tx={tx} 
-                    currency={currency} 
                     formatAmount={formatAmount} 
                     onDelete={onDelete}
                     t={t}

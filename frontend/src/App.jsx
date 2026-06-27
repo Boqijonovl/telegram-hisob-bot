@@ -12,7 +12,6 @@ import {
   ShieldAlert, 
   Lock,
   FileCode,
-  AlertTriangle,
   Printer,
   Globe
 } from 'lucide-react';
@@ -36,16 +35,14 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'settings'
   const [showAddModal, setShowAddModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
-  const [stats, setStats] = useState({ balance: 0, totalIncome: 0, totalExpense: 0, budget: 0, categories: [] });
-  const [settings, setSettings] = useState({ currency: 'UZS', budget: 0, isAdmin: false, is_blocked: false });
+  const [settings, setSettings] = useState({ budget: 0, isAdmin: false, is_blocked: false });
   const [loading, setLoading] = useState(true);
   const [tgUser, setTgUser] = useState(null);
   const [toast, setToast] = useState(null);
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   
-  // Multilingual & Rates States
+  // Multilingual State
   const [lang, setLang] = useState(localStorage.getItem('appLang') || 'uz');
-  const [rates, setRates] = useState({ USD: 12650, EUR: 13540, RUB: 140, UZS: 1 });
 
   // Admin States
   const [adminUsers, setAdminUsers] = useState([]);
@@ -130,13 +127,9 @@ function App() {
         'x-telegram-username': encodeURIComponent(tgUser.username || '')
       };
       
-      const [txRes, settingsRes, ratesRes] = await Promise.all([
+      const [txRes, settingsRes] = await Promise.all([
         fetch(`${API_URL}/api/transactions`, { headers }),
-        fetch(`${API_URL}/api/settings`, { headers }),
-        fetch(`${API_URL}/api/rates`).catch(err => {
-          console.error("Error loading rates:", err);
-          return null;
-        })
+        fetch(`${API_URL}/api/settings`, { headers })
       ]);
 
       if (!txRes.ok || !settingsRes.ok) {
@@ -150,11 +143,6 @@ function App() {
       if (settingsData.is_blocked) {
         setIsBlockedUser(true);
         return;
-      }
-
-      if (ratesRes && ratesRes.ok) {
-        const ratesData = await ratesRes.json();
-        setRates(ratesData);
       }
 
       setTransactions(txData);
@@ -569,7 +557,6 @@ function App() {
             <Dashboard 
               transactions={monthlyTransactions} 
               stats={monthlyStats} 
-              currency={settings.currency}
               formatAmount={formatAmount}
               onDelete={handleDeleteTransaction}
               onAdd={handleAddTransaction}
@@ -581,7 +568,7 @@ function App() {
           {activeTab === 'analytics' && (
             <Analytics 
               stats={monthlyStats} 
-              currency={settings.currency}
+              currency={t.currencySymbol}
               formatAmount={formatAmount}
               t={t}
               lang={lang}
@@ -618,20 +605,6 @@ function App() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">{t.currency}</label>
-                    <select 
-                      value={settings.currency}
-                      onChange={(e) => handleUpdateSettings({ ...settings, currency: e.target.value })}
-                      className="text-input"
-                    >
-                      <option value="UZS">So'm (UZS)</option>
-                      <option value="USD">AQSH Dollari ($)</option>
-                      <option value="EUR">Yevro (€)</option>
-                      <option value="RUB">Rubl (₽)</option>
-                    </select>
-                  </div>
-                  
-                  <div className="form-group">
                     <label className="form-label">{t.budget}</label>
                     <div style={{ position: 'relative' }}>
                       <input 
@@ -642,7 +615,7 @@ function App() {
                         className="text-input"
                       />
                       <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--hint-color)' }}>
-                        {settings.currency}
+                        {t.currencySymbol}
                       </span>
                     </div>
                     <span style={{ fontSize: '11px', color: 'var(--hint-color)', marginTop: '6px', display: 'block' }}>
@@ -791,8 +764,6 @@ function App() {
         <AddTransaction 
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddTransaction}
-          currency={settings.currency}
-          rates={rates}
           t={t}
         />
       )}

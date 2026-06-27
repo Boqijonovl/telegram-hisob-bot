@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Landmark } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
 const EXPENSE_CATEGORIES = [
@@ -18,16 +18,13 @@ const INCOME_CATEGORIES = [
   'Boshqa'
 ];
 
-function AddTransaction({ onClose, onSubmit, currency, rates, t }) {
+function AddTransaction({ onClose, onSubmit, t }) {
   const [type, setType] = useState('expense'); 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Oziq-ovqat');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().substring(0, 10)); 
   const [clickedCategory, setClickedCategory] = useState(null);
-  
-  // Input Currency Select (USD, EUR, RUB, UZS)
-  const [inputCurrency, setInputCurrency] = useState(currency || 'UZS');
 
   // Update default category when switching expense/income
   useEffect(() => {
@@ -51,20 +48,11 @@ function AddTransaction({ onClose, onSubmit, currency, rates, t }) {
       return;
     }
 
-    // Convert amount to settings base currency
-    const amountInUZS = parsedAmount * (rates[inputCurrency] || 1);
-    const amountInBase = amountInUZS / (rates[currency] || 1);
-    const finalAmount = currency === 'UZS' ? Math.round(amountInBase) : Math.round(amountInBase * 100) / 100;
-
-    // Append original input currency to description if converted
-    const conversionLabel = inputCurrency !== currency ? `[${t.originalAmount}: ${parsedAmount} ${inputCurrency}]` : '';
-    const finalDescription = [description.trim(), conversionLabel].filter(Boolean).join(' ');
-
     onSubmit({
-      amount: finalAmount,
+      amount: parsedAmount,
       type,
       category: type === 'income' && category === 'Maosh' ? 'Daromad' : category,
-      description: finalDescription,
+      description: description.trim(),
       date: new Date(date).toISOString()
     });
   };
@@ -79,11 +67,6 @@ function AddTransaction({ onClose, onSubmit, currency, rates, t }) {
   const handleAmountChange = (e) => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     setAmount(e.target.value);
-  };
-
-  const handleCurrencyChange = (cur) => {
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
-    setInputCurrency(cur);
   };
 
   // Auto-scaling font size based on input length
@@ -126,7 +109,7 @@ function AddTransaction({ onClose, onSubmit, currency, rates, t }) {
           </div>
 
           {/* Amount input using native phone keyboard */}
-          <div className="amount-input-wrapper" style={{ marginBottom: '14px' }}>
+          <div className="amount-input-wrapper" style={{ marginBottom: '20px' }}>
             <input
               type="number"
               inputMode="decimal"
@@ -138,38 +121,7 @@ function AddTransaction({ onClose, onSubmit, currency, rates, t }) {
               required
               autoFocus
             />
-            <span className="amount-currency">{inputCurrency}</span>
-          </div>
-
-          {/* Currency conversion selector buttons */}
-          <div className="form-group" style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              {['UZS', 'USD', 'EUR', 'RUB'].map((cur) => (
-                <button
-                  key={cur}
-                  type="button"
-                  onClick={() => handleCurrencyChange(cur)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    borderRadius: '16px',
-                    border: '1px solid var(--card-border)',
-                    backgroundColor: inputCurrency === cur ? 'var(--button-color)' : 'var(--secondary-bg-color)',
-                    color: inputCurrency === cur ? 'var(--button-text-color)' : 'var(--text-color)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {cur}
-                </button>
-              ))}
-            </div>
-            {inputCurrency !== currency && (
-              <span style={{ display: 'block', textAlign: 'center', fontSize: '11px', color: 'var(--hint-color)', marginTop: '8px' }}>
-                🏦 1 {inputCurrency} = {new Intl.NumberFormat('uz-UZ').format(rates[inputCurrency])} UZS
-              </span>
-            )}
+            <span className="amount-currency">{t.currencySymbol}</span>
           </div>
 
           {/* Category Selection Grid */}
