@@ -65,24 +65,37 @@ function replaceUzbekNumberWords(str) {
   return result.join(' ');
 }
 
-// Transaction parser from chat message text
+// Transaction parser from chat message text (finds amount at any position in the sentence)
 function parseTransactionText(text) {
   // Convert word-based numbers to digits first (e.g. "ellik ming" -> "50000")
   const preparedText = replaceUzbekNumberWords(text);
   const parts = preparedText.trim().split(/\s+/);
   if (parts.length === 0) return null;
 
-  // Clean the first part to extract amount
-  let amountStr = parts[0].replace(/[^\d+.-]/g, '');
-  const isIncome = amountStr.startsWith('+');
-  if (isIncome || amountStr.startsWith('-')) {
-    amountStr = amountStr.substring(1);
-  }
-  const amount = parseFloat(amountStr);
-  if (isNaN(amount) || amount <= 0) return null;
+  let amount = NaN;
+  let amountIndex = -1;
+  let isIncome = false;
 
-  // Extract the remaining words
-  const remaining = parts.slice(1);
+  // Search for the first valid number in the words list
+  for (let i = 0; i < parts.length; i++) {
+    let cleanWord = parts[i].replace(/[^\d+.-]/g, '');
+    const incomeCheck = cleanWord.startsWith('+');
+    if (incomeCheck || cleanWord.startsWith('-')) {
+      cleanWord = cleanWord.substring(1);
+    }
+    const val = parseFloat(cleanWord);
+    if (!isNaN(val) && val > 0) {
+      amount = val;
+      amountIndex = i;
+      isIncome = incomeCheck;
+      break;
+    }
+  }
+
+  if (isNaN(amount)) return null;
+
+  // Description is everything else excluding the parsed amount word
+  const remaining = parts.filter((_, idx) => idx !== amountIndex);
   const remainingText = remaining.join(' ');
   const remainingLower = remainingText.toLowerCase();
 
@@ -290,26 +303,46 @@ Hisob-kitob botiga xush kelibsiz!
       const audioRes = await fetch(fileLink.href);
       const audioBuffer = await audioRes.arrayBuffer();
 
-      // Submit to Hugging Face Whisper Large v3
-      const hfRes = await fetch(
-        "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
-        {
-          headers: {
-            Authorization: `Bearer ${hfToken}`,
-            "Content-Type": "audio/ogg"
-          },
-          method: "POST",
-          body: audioBuffer
-        }
-      );
+      // Submit to Hugging Face Whisper Large v3 with load-recovery retries
+      let retries = 5;
+      const delay = 5000;
+      let hfRes;
+      let hfData;
 
-      if (!hfRes.ok) {
-        const errJson = await hfRes.json().catch(() => ({}));
-        throw new Error(errJson.error || `Hugging Face returned status ${hfRes.status}`);
+      while (retries > 0) {
+        hfRes = await fetch(
+          "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+          {
+            headers: {
+              Authorization: `Bearer ${hfToken}`,
+              "Content-Type": "audio/ogg"
+            },
+            method: "POST",
+            body: audioBuffer
+          }
+        );
+
+        hfData = await hfRes.json().catch(() => ({}));
+
+        if (hfRes.status === 503 && hfData.error && hfData.error.includes("loading")) {
+          const waitSec = Math.round(hfData.estimated_time || 10);
+          await ctx.telegram.editMessageText(
+            ctx.chat.id,
+            progressMsg.message_id,
+            null,
+            `🎙 Sun'iy intellekt modeli yuklanmoqda, iltimos ${waitSec} soniya kutib turing...`
+          );
+          // Wait and retry
+          await new Promise(resolve => setTimeout(resolve, Math.max(waitSec * 1000, delay)));
+          retries--;
+        } else if (!hfRes.ok) {
+          throw new Error(hfData.error || `Hugging Face returned status ${hfRes.status}`);
+        } else {
+          break;
+        }
       }
 
-      const hfData = await hfRes.json();
-      const transcribedText = hfData.text || "";
+      const transcribedText = hfData?.text || "";
 
       if (!transcribedText.trim()) {
         return ctx.telegram.editMessageText(
