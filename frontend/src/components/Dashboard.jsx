@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Trash2, 
   Utensils, 
   Car, 
@@ -14,7 +12,9 @@ import {
   Coins, 
   HelpCircle,
   AlertTriangle,
-  Search
+  Search,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 
 // Map categories to appropriate Lucide icons and colors
@@ -56,7 +56,7 @@ function AnimatedCounter({ value, duration = 800 }) {
     }
 
     const totalMiliseconds = duration;
-    const incrementTime = 25; // Update every 25ms
+    const incrementTime = 25; 
     const totalSteps = totalMiliseconds / incrementTime;
     const increment = (end - start) / totalSteps;
 
@@ -96,7 +96,6 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
       diff -= 80;
     }
 
-    // Only allow left swiping
     if (diff < 0) {
       setOffsetX(Math.max(diff, -100));
     } else {
@@ -108,7 +107,6 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
     if (offsetX < -45) {
       setOffsetX(-80);
       setIsSwiped(true);
-      // Native light haptic feedback on swipe snap
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     } else {
       setOffsetX(0);
@@ -238,7 +236,6 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
   };
 
   const handleQuickTemplateClick = (tmpl) => {
-    // Trigger Telegram haptic click
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
     if (onAdd) {
       onAdd({
@@ -253,7 +250,7 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* 3D Parallax Balance Card */}
+      {/* 3D Parallax Balance Card (Focused on balance only) */}
       <div 
         ref={cardRef}
         onMouseMove={handleMouseMove}
@@ -261,32 +258,34 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
         className="balance-card" 
-        style={tiltStyle}
+        style={{ ...tiltStyle, marginBottom: '16px' }}
       >
         <p className="balance-title">Umumiy balans</p>
-        <h1 className="balance-amount">
+        <h1 className="balance-amount" style={{ marginBottom: 0 }}>
           <AnimatedCounter value={stats.balance} /> <span>{currency}</span>
         </h1>
-        
-        <div className="stats-grid">
-          <div className="stat-item">
-            <div className="stat-icon income">
-              <TrendingUp size={18} />
-            </div>
-            <div>
-              <p className="stat-label">Daromad</p>
-              <p className="stat-val">+<AnimatedCounter value={stats.totalIncome} /></p>
-            </div>
+      </div>
+
+      {/* Income & Expense Cards Grid (Separate VIP Cards) */}
+      <div className="stats-cards-grid">
+        <div className="stat-card income">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Daromad</span>
+            <div className="stat-card-icon-wrapper"><TrendingUp size={16} /></div>
           </div>
-          <div className="stat-item">
-            <div className="stat-icon expense">
-              <TrendingDown size={18} />
-            </div>
-            <div>
-              <p className="stat-label">Harajat</p>
-              <p className="stat-val">-<AnimatedCounter value={stats.totalExpense} /></p>
-            </div>
+          <h3 className="stat-card-val">
+            +<AnimatedCounter value={stats.totalIncome} /> <span className="stat-card-curr">{currency}</span>
+          </h3>
+        </div>
+
+        <div className="stat-card expense">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Harajat</span>
+            <div className="stat-card-icon-wrapper"><TrendingDown size={16} /></div>
           </div>
+          <h3 className="stat-card-val">
+            -<AnimatedCounter value={stats.totalExpense} /> <span className="stat-card-curr">{currency}</span>
+          </h3>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Delete } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
 const EXPENSE_CATEGORIES = [
@@ -20,8 +20,6 @@ const INCOME_CATEGORIES = [
   'Sovg\'alar',
   'Boshqa'
 ];
-
-const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'];
 
 function AddTransaction({ onClose, onSubmit, currency }) {
   const [type, setType] = useState('expense'); 
@@ -62,46 +60,23 @@ function AddTransaction({ onClose, onSubmit, currency }) {
     });
   };
 
-  // Custom iOS Numpad key tap logic
-  const handleKeyClick = (key) => {
-    // Standard haptic light vibration on keypress
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-
-    if (key === 'backspace') {
-      setAmount(prev => prev.slice(0, -1));
-      return;
-    }
-
-    if (key === '.') {
-      if (amount.includes('.')) return;
-      if (amount === '') {
-        setAmount('0.');
-        return;
-      }
-    }
-
-    if (amount.length >= 11) return; // Prevent layout overflows
-
-    if (amount === '0' && key === '0') return;
-    if (amount === '0' && key !== '.') {
-      setAmount(key);
-      return;
-    }
-
-    setAmount(prev => prev + key);
-  };
-
   const handleCategoryClick = (catName) => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     setClickedCategory(catName);
     setCategory(catName);
-    setTimeout(() => setClickedCategory(null), 250); // Duration matches CSS bounce animation
+    setTimeout(() => setClickedCategory(null), 250); 
   };
 
-  // Auto-scaling font size logic based on character length
+  const handleAmountChange = (e) => {
+    // Play native Telegram haptic tick on every input character typed
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    setAmount(e.target.value);
+  };
+
+  // Auto-scaling font size based on input length
   const getAmountFontSize = () => {
     const len = amount.length;
-    if (len < 6) return '38px';
+    if (len < 6) return '36px';
     if (len < 9) return '28px';
     return '22px';
   };
@@ -137,14 +112,19 @@ function AddTransaction({ onClose, onSubmit, currency }) {
             </button>
           </div>
 
-          {/* Amount input displaying simulated text input with dynamic scaling */}
+          {/* Amount input using native phone keyboard */}
           <div className="amount-input-wrapper">
-            <div 
-              className="amount-input-display"
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              className="amount-input"
               style={{ fontSize: getAmountFontSize() }}
-            >
-              {amount || '0'}
-            </div>
+              value={amount}
+              onChange={handleAmountChange}
+              required
+              autoFocus
+            />
             <span className="amount-currency">{currency}</span>
           </div>
 
@@ -203,23 +183,6 @@ function AddTransaction({ onClose, onSubmit, currency }) {
               />
               <Calendar size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--hint-color)', pointerEvents: 'none' }} />
             </div>
-          </div>
-
-          {/* Custom iOS-style Numpad Grid */}
-          <div className="ios-numpad-container">
-            {NUMPAD_KEYS.map((key) => {
-              const isBackspace = key === 'backspace';
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleKeyClick(key)}
-                  className={`numpad-key-btn ${isBackspace ? 'backspace-key' : ''}`}
-                >
-                  {isBackspace ? <Delete size={20} /> : key}
-                </button>
-              );
-            })}
           </div>
 
           {/* Submit */}

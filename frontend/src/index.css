@@ -915,61 +915,6 @@ body {
   100% { transform: translate(-80px, -50px) scale(1.1); }
 }
 
-/* Custom simulated amount input display */
-.amount-input-display {
-  width: 100%;
-  min-height: 58px;
-  border-bottom: 2px solid var(--card-border);
-  color: var(--text-color);
-  font-weight: 800;
-  text-align: center;
-  padding: 8px 0;
-  outline: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: font-size var(--transition-fast);
-}
-
-/* Custom iOS-style Numpad */
-.ios-numpad-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 20px 0;
-  padding: 10px;
-  background-color: rgba(255, 255, 255, 0.01);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--card-border);
-}
-
-.numpad-key-btn {
-  background-color: var(--secondary-bg-color);
-  border: 1px solid var(--card-border);
-  color: var(--text-color);
-  font-family: inherit;
-  font-size: 22px;
-  font-weight: 700;
-  height: 54px;
-  border-radius: 27px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.numpad-key-btn:active {
-  background-color: rgba(255, 255, 255, 0.08);
-  transform: scale(0.95);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.backspace-key {
-  color: var(--expense-color);
-}
-
 /* Category Jump Pop animation */
 @keyframes popJump {
   0% { transform: scale(1); }
@@ -1013,4 +958,82 @@ body {
   position: relative;
   z-index: 2;
   background-color: var(--card-bg);
+}
+
+/* VIP Stats Grid with separate Income / Expense Cards */
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, var(--card-bg), rgba(30, 41, 59, 0.6));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.stat-card:active {
+  transform: scale(0.98);
+}
+
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.stat-card-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--hint-color);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.stat-card-icon-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card.income .stat-card-icon-wrapper {
+  background-color: var(--income-bg);
+  color: var(--income-color);
+}
+
+.stat-card.expense .stat-card-icon-wrapper {
+  background-color: var(--expense-bg);
+  color: var(--expense-color);
+}
+
+.stat-card-val {
+  font-size: clamp(14px, 4vw, 18px);
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.stat-card-val::-webkit-scrollbar {
+  display: none;
+}
+
+.stat-card-curr {
+  font-size: 10px;
+  color: var(--hint-color);
+  font-weight: 500;
 }
