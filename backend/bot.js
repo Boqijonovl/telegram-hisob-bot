@@ -428,8 +428,8 @@ Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(
         ctx.chat.id,
         progressMsg.message_id,
         null,
-        "❌ Ovozli xabarni tahlil qilishda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
-      );
+        `❌ Ovozli xabarni tahlil qilishda xatolik yuz berdi: ${error.message || error}`
+      ).catch(() => {});
     }
   });
 
