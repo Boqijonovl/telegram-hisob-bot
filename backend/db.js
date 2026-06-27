@@ -244,5 +244,96 @@ export const db = {
     }
 
     return settings;
+  },
+
+  // -------------------------
+  // CATEGORIES
+  // -------------------------
+  async getCategories(userId) {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('user_id', String(userId));
+      
+    if (error) {
+      console.error('Supabase error fetching categories:', error);
+      // Fallback defaults if table doesn't exist yet
+      if (error.code === '42P01') return [];
+      throw error;
+    }
+    return data || [];
+  },
+
+  async addCategory(userId, type, name) {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ user_id: String(userId), type, name }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCategory(userId, type, name) {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .match({ user_id: String(userId), type, name });
+    if (error) throw error;
+    return true;
+  },
+
+  async updateCategory(userId, type, oldName, newName) {
+    const { data, error } = await supabase
+      .from('categories')
+      .update({ name: newName })
+      .match({ user_id: String(userId), type, name: oldName })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  // -------------------------
+  // RECURRING TRANSACTIONS
+  // -------------------------
+  async getRecurringTransactions(userId) {
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', String(userId))
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      if (error.code === '42P01') return []; // table not found fallback
+      throw error;
+    }
+    return data || [];
+  },
+
+  async addRecurringTransaction(userId, { type, category, amount, description, cron_expression }) {
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .insert([{ 
+        user_id: String(userId), 
+        type, 
+        category, 
+        amount: parseFloat(amount), 
+        description, 
+        cron_expression 
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteRecurringTransaction(id) {
+    const { error } = await supabase
+      .from('recurring_transactions')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   }
 };

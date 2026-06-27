@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, Plus, Edit2, Check, X, Layers } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
-function CategoryManager({ categories, setCategories, setActiveTab, t }) {
+function CategoryManager({ categories, setCategories, setActiveTab, tgUser, apiUrl, t }) {
   const [activeType, setActiveType] = useState('expense'); // 'expense' or 'income'
   const [newCatName, setNewCatName] = useState('');
   const [editingCat, setEditingCat] = useState(null);
@@ -10,25 +10,39 @@ function CategoryManager({ categories, setCategories, setActiveTab, t }) {
 
   const currentList = activeType === 'expense' ? categories.expense : categories.income;
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = newCatName.trim();
     if (!trimmed) return;
     if (currentList.includes(trimmed)) return;
 
-    const newList = [...currentList, trimmed];
-    setCategories({
-      ...categories,
-      [activeType]: newList
-    });
-    setNewCatName('');
+    try {
+      await fetch(`${apiUrl}/api/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-user-id': tgUser?.id || '123456' },
+        body: JSON.stringify({ type: activeType, name: trimmed })
+      });
+      const newList = [...currentList, trimmed];
+      setCategories({
+        ...categories,
+        [activeType]: newList
+      });
+      setNewCatName('');
+    } catch (e) { console.error(e); }
   };
 
-  const handleDelete = (catName) => {
-    const newList = currentList.filter(c => c !== catName);
-    setCategories({
-      ...categories,
-      [activeType]: newList
-    });
+  const handleDelete = async (catName) => {
+    try {
+      await fetch(`${apiUrl}/api/categories`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-user-id': tgUser?.id || '123456' },
+        body: JSON.stringify({ type: activeType, name: catName })
+      });
+      const newList = currentList.filter(c => c !== catName);
+      setCategories({
+        ...categories,
+        [activeType]: newList
+      });
+    } catch (e) { console.error(e); }
   };
 
   const startEdit = (catName) => {
@@ -36,20 +50,27 @@ function CategoryManager({ categories, setCategories, setActiveTab, t }) {
     setEditVal(catName);
   };
 
-  const saveEdit = (oldName) => {
+  const saveEdit = async (oldName) => {
     const trimmed = editVal.trim();
     if (!trimmed || trimmed === oldName) {
       setEditingCat(null);
       return;
     }
     
-    // Replace in list
-    const newList = currentList.map(c => c === oldName ? trimmed : c);
-    setCategories({
-      ...categories,
-      [activeType]: newList
-    });
-    setEditingCat(null);
+    try {
+      await fetch(`${apiUrl}/api/categories`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-user-id': tgUser?.id || '123456' },
+        body: JSON.stringify({ type: activeType, oldName, newName: trimmed })
+      });
+      // Replace in list
+      const newList = currentList.map(c => c === oldName ? trimmed : c);
+      setCategories({
+        ...categories,
+        [activeType]: newList
+      });
+      setEditingCat(null);
+    } catch (e) { console.error(e); }
   };
 
   return (

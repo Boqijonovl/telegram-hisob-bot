@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   LayoutDashboard, 
   PieChart, 
@@ -16,14 +16,16 @@ import {
   Globe,
   User
 } from 'lucide-react';
-import Dashboard from './components/Dashboard';
-import Analytics from './components/Analytics';
-import AddTransaction from './components/AddTransaction';
-import Profile from './components/Profile';
-import VaultModal from './components/VaultModal';
-import AdminPanel from './components/AdminPanel';
-import History from './components/History';
-import CategoryManager from './components/CategoryManager';
+import { translations } from './translations';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Analytics = lazy(() => import('./components/Analytics'));
+const AddTransaction = lazy(() => import('./components/AddTransaction'));
+const Profile = lazy(() => import('./components/Profile'));
+const VaultModal = lazy(() => import('./components/VaultModal'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const History = lazy(() => import('./components/History'));
+const CategoryManager = lazy(() => import('./components/CategoryManager'));
 import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
@@ -41,13 +43,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile', 'add-transaction', 'history', 'admin'
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
-  const [categories, setCategories] = useState(() => {
-    const saved = localStorage.getItem('appCategories');
-    if (saved) return JSON.parse(saved);
-    return {
-      expense: ['Oziq-ovqat', 'Transport', 'Xaridlar', 'Kafe', 'Ko\'ngilochar', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Boshqa'],
-      income: ['Maosh', 'Biznes', 'Sovg\'alar', 'Boshqa']
-    };
+  const [categories, setCategories] = useState({
+    expense: ['Oziq-ovqat', 'Transport', 'Xaridlar', 'Kafe', 'Ko\'ngilochar', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Boshqa'],
+    income: ['Maosh', 'Biznes', 'Sovg\'alar', 'Boshqa']
   });
   const [settings, setSettings] = useState({ budget: 0, isAdmin: false, is_blocked: false });
   const [loading, setLoading] = useState(true);
@@ -152,9 +150,10 @@ function App() {
         'x-telegram-username': encodeURIComponent(tgUser.username || '')
       };
       
-      const [txRes, settingsRes] = await Promise.all([
+      const [txRes, settingsRes, catRes] = await Promise.all([
         fetch(`${API_URL}/api/transactions`, { headers }),
-        fetch(`${API_URL}/api/settings`, { headers })
+        fetch(`${API_URL}/api/settings`, { headers }),
+        fetch(`${API_URL}/api/categories`, { headers })
       ]);
 
       if (!txRes.ok || !settingsRes.ok) {
@@ -163,6 +162,16 @@ function App() {
 
       const txData = await txRes.json();
       const settingsData = await settingsRes.json();
+      const catData = catRes.ok ? await catRes.json() : [];
+
+      if (catData && catData.length > 0) {
+        const exp = catData.filter(c => c.type === 'expense').map(c => c.name);
+        const inc = catData.filter(c => c.type === 'income').map(c => c.name);
+        setCategories(prev => ({
+          expense: exp.length > 0 ? exp : prev.expense,
+          income: inc.length > 0 ? inc : prev.income
+        }));
+      }
 
       // Check if blocked by admin
       if (settingsData.is_blocked) {
@@ -574,7 +583,7 @@ function App() {
           <p>{t.loading}</p>
         </div>
       ) : (
-        <>
+        <Suspense fallback={<div className="loader-container"><div className="spinner"></div></div>}>
           {/* Month Navigation Selector Bar */}
           {(activeTab === 'dashboard' || activeTab === 'analytics' || activeTab === 'history') && (
             <div className="month-navigation-bar">
@@ -655,15 +664,14 @@ function App() {
           {activeTab === 'category-manager' && (
             <CategoryManager 
               categories={categories}
-              setCategories={(newCategories) => {
-                setCategories(newCategories);
-                localStorage.setItem('appCategories', JSON.stringify(newCategories));
-              }}
+              setCategories={setCategories}
               setActiveTab={setActiveTab}
+              tgUser={tgUser}
+              apiUrl={API_URL}
               t={t}
             />
           )}
-        </>
+        </Suspense>
       )}
 
       {/* Add Transaction Tab */}

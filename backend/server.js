@@ -163,6 +163,91 @@ app.post('/api/settings/reset', async (req, res) => {
   }
 });
 
+// --- Categories Endpoints ---
+app.get('/api/categories', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const categories = await db.getCategories(userId);
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { type, name } = req.body;
+    if (!type || !name) return res.status(400).json({ error: 'Type and name are required' });
+    const category = await db.addCategory(userId, type, name);
+    res.status(201).json(category);
+  } catch (error) {
+    console.error('Error adding category:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/categories', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { type, oldName, newName } = req.body;
+    if (!type || !oldName || !newName) return res.status(400).json({ error: 'Missing parameters' });
+    const updated = await db.updateCategory(userId, type, oldName, newName);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/categories', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { type, name } = req.body;
+    await db.deleteCategory(userId, type, name);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Recurring Transactions Endpoints ---
+app.get('/api/recurring', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const data = await db.getRecurringTransactions(userId);
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching recurring:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/recurring', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { type, category, amount, description, cron_expression } = req.body;
+    if (!amount || !category) return res.status(400).json({ error: 'Missing fields' });
+    const created = await db.addRecurringTransaction(userId, { type, category, amount, description, cron_expression });
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('Error adding recurring:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/recurring/:id', async (req, res) => {
+  try {
+    await db.deleteRecurringTransaction(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting recurring:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // --- Admin Panel Endpoints ---
 
 // Get all users (Admin only)

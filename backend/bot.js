@@ -66,137 +66,81 @@ function replaceUzbekNumberWords(str) {
   return result.join(' ');
 }
 
-// Transaction parser from chat message text (allows number to be anywhere in the message)
-function parseTransactionText(text) {
-  // Convert word-based numbers to digits first (e.g. "ellik ming" -> "50000")
-  const preparedText = replaceUzbekNumberWords(text);
-  const parts = preparedText.trim().split(/\s+/);
-  if (parts.length === 0) return null;
+// AI Transaction parser using Groq Llama-3 model
+async function parseTransactionWithLLM(text, userId) {
+  try {
+    const groqToken = process.env.GROQ_API_KEY;
+    if (!groqToken) throw new Error("GROQ_API_KEY is not set");
 
-  // Search for the amount in all parts
-  let amount = null;
-  let isIncome = false;
-  let amountIndex = -1;
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    // Match strings that look like a number, possibly starting with + or -
-    // e.g. 50000, +150000, -25000
-    if (/^[+-]?\d+(?:\.\d+)?$/.test(part)) {
-      isIncome = part.startsWith('+');
-      let cleanPart = part;
-      if (part.startsWith('+') || part.startsWith('-')) {
-        cleanPart = part.substring(1);
-      }
-      amount = parseFloat(cleanPart);
-      if (!isNaN(amount) && amount > 0) {
-        amountIndex = i;
-        break; // Found the amount!
-      }
-    }
-  }
-
-  // If no valid amount found, return null
-  if (amount === null) return null;
-
-  // Remove the amount from the words to get the description
-  const remaining = parts.filter((_, idx) => idx !== amountIndex);
-  const remainingText = remaining.join(' ');
-  const remainingLower = remainingText.toLowerCase();
-
-  // Default parameters
-  let category = isIncome ? 'Maosh' : 'Boshqa';
-  let description = remainingText || (isIncome ? 'Kiritilgan daromad' : 'Kiritilgan harajat');
-
-  // Keyword to category mappings
-  const keywordMap = {
-    'Oziq-ovqat': ['ovqat', 'tushlik', 'kechki', 'non', 'kafe', 'restoran', 'choyxona', 'shirinlik', 'bozor-ochar', 'supermarket', 'korzinka', 'makro', 'osh', 'fastfood', 'pitsa', 'somsa', 'burger', 'choy', 'suv', 'cola', 'fanta'],
-    'Transport': ['taksi', 'benzin', 'metro', 'avtobus', 'yo\'l', 'yol', 'zapravka', 'propan', 'metan', 'yandex', 'mashina', 'remont', 'moy', 'shina', 'yol-kira', 'yolkira'],
-    'Kommunal': ['svet', 'gaz', 'suv', 'arenda', 'ijara', 'uy', 'kvartira', 'issiq', 'internet', 'wifi', 'komunalka', 'payme', 'click'],
-    'Xaridlar': ['kiyim', 'bozor', 'shopping', 'telefon', 'noutbuk', 'texnika', 'oyoq-kiyim', 'shim', 'kofta', 'ko\'zoynak', 'soat', 'sumka', 'parfumeriya'],
-    'Ko\'ngilochar': ['kino', 'teatr', 'oyin', 'o\'yin', 'konsert', 'park', 'attraksion', 'playstation', 'ps', 'klub', 'sayohat', 'dam'],
-    'Sog\'liqni saqlash': ['dori', 'doktor', 'shifokor', 'apteka', 'kasal', 'klinika', 'tish', 'shifoxona', 'analiz'],
-    'Ta\'lim': ['kurs', 'maktab', 'universitet', 'kitob', 'institut', 'repetitor', 'shartnoma', 'kontrakt', 'o\'quv', 'oquv'],
-    'Sovg\'alar': ['sovg\'a', 'sovga', 'hadyalar', 'hadya', 'ehson', 'sadaqa', 'sovg\'alar']
-  };
-
-  if (isIncome) {
-    category = 'Maosh'; // defaults for income
-    if (remainingLower.includes('biznes') || remainingLower.includes('foyda') || remainingLower.includes('sotuv') || remainingLower.includes('kassa')) {
-      category = 'Biznes';
-    } else if (remainingLower.includes('sovga') || remainingLower.includes('sovg\'a') || remainingLower.includes('hadya') || remainingLower.includes('hadyalar')) {
-      category = 'Sovg\'alar';
-    } else if (remainingLower.includes('boshqa') || remainingLower.includes('mayda')) {
-      category = 'Boshqa';
-    }
-  } else {
-    // Check expense keywords
-    for (const [catName, keywords] of Object.entries(keywordMap)) {
-      const match = keywords.some(keyword => remainingLower.includes(keyword));
-      if (match) {
-        category = catName;
-        break;
-      }
-    }
-  }
-
-  return {
-    amount,
-    type: isIncome ? 'income' : 'expense',
-    category,
-    description
-  };
-}
-
-// Helper to filter out phone/date candidates from OCR text
-function looksLikeDateOrPhone(num) {
-  const str = String(num);
-  if (str.length === 9 || str.length === 12) return true; // Phone formats
-  if (str.startsWith('2025') || str.startsWith('2026')) return true; // Year formats
-  return false;
-}
-
-// Receipt text parser to find final receipt amount
-function parseReceiptAmount(text) {
-  const lines = text.split('\n');
-  const totalKeywords = ['jami', 'summa', 'total', 'itog', 'oplata', 'to\'lov', 'tlov', 'kas', 'kassa', 'xizmat', 'ittogo', 'itogo', 'itg', 'fiş', 'fis'];
-  
-  let candidates = [];
-
-  for (const line of lines) {
-    const lineLower = line.toLowerCase();
-    const matchesKeyword = totalKeywords.some(keyword => lineLower.includes(keyword));
+    // Fetch user's custom categories
+    const userCategories = await db.getCategories(userId);
+    const expenseCats = userCategories.filter(c => c.type === 'expense').map(c => c.name);
+    const incomeCats = userCategories.filter(c => c.type === 'income').map(c => c.name);
     
-    if (matchesKeyword) {
-      const matches = line.match(/\b\d+[\s.,]?\d*[\s.,]?\d+\b/g);
-      if (matches) {
-        matches.forEach(m => {
-          const val = parseFloat(m.replace(/[^\d]/g, ''));
-          if (val && val > 100 && val < 50000000) {
-            candidates.push(val);
-          }
-        });
+    // Default categories if user hasn't set any
+    const defaultExpense = ['Oziq-ovqat', 'Transport', 'Xaridlar', 'Kafe', 'Ko\'ngilochar', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Boshqa'];
+    const defaultIncome = ['Maosh', 'Biznes', 'Sovg\'alar', 'Boshqa'];
+    
+    const validExpense = expenseCats.length > 0 ? expenseCats : defaultExpense;
+    const validIncome = incomeCats.length > 0 ? incomeCats : defaultIncome;
+
+    const systemPrompt = `You are a financial assistant for an Uzbek user. 
+    Analyze the following transcribed text from a voice message or raw text, and extract the transaction details.
+    Respond ONLY with a valid raw JSON object. Do not wrap in markdown \`\`\`json blocks.
+    
+    Required JSON structure:
+    {
+      "amount": (Number, required. Extract the amount. Convert text numbers like "ellik ming" to 50000. If missing or unclear, return null),
+      "type": (String, "income" or "expense". Default is expense unless words like maosh, foyda, biznes imply income),
+      "category": (String, required. Must be EXACTLY ONE of the following:
+         For expense: [${validExpense.join(', ')}]
+         For income: [${validIncome.join(', ')}]
+         If it doesn't fit well, use 'Boshqa'
+      ),
+      "description": (String. The rest of the words. e.g. "bozordan go'sht oldim")
+    }`;
+
+    const res = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama3-70b-8192",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text }
+        ],
+        temperature: 0.1
+      },
+      {
+        headers: {
+          "Authorization": `Bearer ${groqToken}`,
+          "Content-Type": "application/json"
+        }
       }
+    );
+
+    let content = res.data.choices[0].message.content.trim();
+    if (content.startsWith('```json')) {
+      content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    } else if (content.startsWith('```')) {
+      content = content.replace(/```/g, '').trim();
     }
-  }
 
-  if (candidates.length > 0) {
-    return Math.max(...candidates);
-  }
+    const parsed = JSON.parse(content);
+    if (!parsed.amount || isNaN(parsed.amount)) return null;
 
-  // Fallback: get largest number matching money criteria
-  const allNumbers = text.match(/\b\d+[\s.,]?\d*[\s.,]?\d+\b/g);
-  if (allNumbers) {
-    const vals = allNumbers
-      .map(m => parseFloat(m.replace(/[^\d]/g, '')))
-      .filter(val => val && val > 100 && val < 10000000 && !looksLikeDateOrPhone(val));
-    if (vals.length > 0) {
-      return Math.max(...vals);
-    }
+    return {
+      amount: parsed.amount,
+      type: parsed.type === 'income' ? 'income' : 'expense',
+      category: parsed.category || 'Boshqa',
+      description: parsed.description || ''
+    };
+  } catch (error) {
+    console.error("LLM Parsing error:", error.response?.data || error.message);
+    return null; // Fallback to failing parsing
   }
-
-  return null;
 }
+
+
 
 export function initBot() {
   if (!token) return null;
@@ -366,7 +310,7 @@ Hisob-kitob botiga xush kelibsiz!
         );
       }
 
-      const parsed = parseTransactionText(transcribedText);
+      const parsed = await parseTransactionWithLLM(transcribedText, userId);
       if (!parsed) {
         return ctx.telegram.editMessageText(
           ctx.chat.id,
@@ -433,14 +377,42 @@ Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(
     const progressMsg = await ctx.reply("📸 Chek rasmi qabul qilindi. Matn skanerlanmoqda...");
 
     try {
+      const groqToken = process.env.GROQ_API_KEY;
+      if (!groqToken) throw new Error("GROQ_API_KEY is not set");
+
       const fileLink = await ctx.telegram.getFileLink(fileId);
       
-      // Perform OCR
-      const worker = await createWorker('eng+rus');
-      const { data: { text } } = await worker.recognize(fileLink.href);
-      await worker.terminate();
+      // Download image and convert to base64
+      const imageRes = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
+      const base64Image = Buffer.from(imageRes.data).toString('base64');
+      const dataUrl = `data:image/jpeg;base64,${base64Image}`;
 
-      const amount = parseReceiptAmount(text);
+      // Call Groq Vision API
+      const groqRes = await axios.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          model: "llama-3.2-90b-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Look at this receipt. Extract ONLY the final total amount paid as a raw number. Do not include any currency symbols or text." },
+                { type: "image_url", image_url: { url: dataUrl } }
+              ]
+            }
+          ],
+          temperature: 0.1
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${groqToken}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      const content = groqRes.data.choices[0].message.content.trim();
+      const amount = parseFloat(content.replace(/[^\d.]/g, ''));
 
       if (!amount || amount <= 0) {
         return ctx.telegram.editMessageText(
@@ -509,7 +481,7 @@ Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(
 
     if (text.startsWith('/')) return;
 
-    const parsed = parseTransactionText(text);
+    const parsed = await parseTransactionWithLLM(text, userId);
     if (!parsed) {
       return ctx.reply("Tushunarsiz format. Harajat yozish uchun masalan: '50000 taksi' yoki daromad uchun '+100000 maosh' ko'rinishida yuboring. Yordam uchun /help bosing.");
     }
