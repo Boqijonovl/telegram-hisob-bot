@@ -11,7 +11,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Logger middleware
 app.use((req, res, next) => {
@@ -242,6 +243,34 @@ app.get('/api/rates', async (req, res) => {
       RUB: 140,
       UZS: 1
     });
+  }
+});
+
+// Send PDF report via Telegram Bot
+app.post('/api/send-pdf', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { pdfBase64, filename } = req.body;
+    
+    if (!pdfBase64) {
+      return res.status(400).json({ error: 'Missing PDF data' });
+    }
+
+    // Convert base64 to buffer
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
+    const pdfBuffer = Buffer.from(base64Data, 'base64');
+    
+    const fileOptions = {
+      filename: filename || 'Hisobot.pdf',
+      contentType: 'application/pdf',
+    };
+
+    await bot.sendDocument(userId, pdfBuffer, {}, fileOptions);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error sending PDF via bot:', error);
+    res.status(500).json({ error: 'Failed to send PDF' });
   }
 });
 

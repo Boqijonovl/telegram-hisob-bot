@@ -11,16 +11,17 @@ import {
   Briefcase, 
   Gift, 
   HelpCircle,
-  AlertTriangle,
-  Search,
   TrendingUp,
   TrendingDown,
   HeartPulse,
   GraduationCap,
-  Settings
+  Settings,
+  Download,
+  Loader
 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
-// Map categories to appropriate Lucide icons and colors (Modern & Specific)
+// Categories Configuration
 export const getCategoryConfig = (categoryName) => {
   const configs = {
     'Oziq-ovqat': { icon: Apple, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
@@ -36,12 +37,12 @@ export const getCategoryConfig = (categoryName) => {
     'Biznes': { icon: Briefcase, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
     'Sovg\'alar': { icon: Gift, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
     'Daromad': { icon: TrendingUp, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+    'Xazna': { icon: Wallet, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
     'Boshqa': { icon: HelpCircle, color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
   };
   return configs[categoryName] || configs['Boshqa'];
 };
 
-// Odometer animated counter for financial figures
 function AnimatedCounter({ value, duration = 800 }) {
   const [count, setCount] = useState(0);
 
@@ -52,7 +53,6 @@ function AnimatedCounter({ value, duration = 800 }) {
       setCount(end);
       return;
     }
-
     const totalMiliseconds = duration;
     const incrementTime = 25; 
     const totalSteps = totalMiliseconds / incrementTime;
@@ -76,24 +76,17 @@ function AnimatedCounter({ value, duration = 800 }) {
   return new Intl.NumberFormat('uz-UZ').format(count);
 }
 
-// Format day header based on selected language
 const formatDayHeader = (dateStr, t, lang) => {
   const date = new Date(dateStr);
   const todayStr = new Date().toISOString().substring(0, 10);
-  
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().substring(0, 10);
-
   const locale = lang === 'uz' ? 'uz-UZ' : lang === 'ru' ? 'ru-RU' : 'en-US';
 
-  if (dateStr === todayStr) {
-    return `${t.today}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
-  } else if (dateStr === yesterdayStr) {
-    return `${t.yesterday}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
-  } else {
-    return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
-  }
+  if (dateStr === todayStr) return `${t.today}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  if (dateStr === yesterdayStr) return `${t.yesterday}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
 // Group transactions by calendar day YYYY-MM-DD
@@ -103,52 +96,32 @@ const groupTransactionsByDay = (txList) => {
     const date = new Date(tx.date);
     const dateKey = date.toISOString().substring(0, 10);
     if (!groups[dateKey]) {
-      groups[dateKey] = {
-        dateStr: dateKey,
-        transactions: [],
-        dayIncome: 0,
-        dayExpense: 0
-      };
+      groups[dateKey] = { dateStr: dateKey, transactions: [], dayIncome: 0, dayExpense: 0 };
     }
     groups[dateKey].transactions.push(tx);
     const amount = parseFloat(tx.amount);
-    if (tx.type === 'income') {
-      groups[dateKey].dayIncome += amount;
-    } else {
-      groups[dateKey].dayExpense += amount;
-    }
+    if (tx.type === 'income') groups[dateKey].dayIncome += amount;
+    else groups[dateKey].dayExpense += amount;
   });
-
   return Object.values(groups).sort((a, b) => b.dateStr.localeCompare(a.dateStr));
 };
 
-// Swipe-to-delete item wrapper
 function TransactionItem({ tx, formatAmount, onDelete, t }) {
   const [startX, setStartX] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isSwiped, setIsSwiped] = useState(false);
+  const conf = getCategoryConfig(tx.category);
+  const Icon = conf.icon;
 
-  const handleTouchStart = (e) => {
-    setStartX(e.touches[0].clientX);
-  };
-
+  const handleTouchStart = (e) => setStartX(e.touches[0].clientX);
   const handleTouchMove = (e) => {
     const currentX = e.touches[0].clientX;
     let diff = currentX - startX;
-
-    if (isSwiped) {
-      diff -= 80;
-    }
-
-    if (diff < 0) {
-      setOffsetX(Math.max(diff, -100));
-    } else {
-      setOffsetX(0);
-    }
+    if (isSwiped) diff -= 80;
+    setOffsetX(Math.max(diff, -100));
   };
-
   const handleTouchEnd = () => {
-    if (offsetX < -45) {
+    if (offsetX < -40) {
       setOffsetX(-80);
       setIsSwiped(true);
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
@@ -158,326 +131,282 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
     }
   };
 
-  const handleDeleteClick = (e) => {
-    e.stopPropagation();
-    onDelete(tx.id);
-  };
-
-  const config = getCategoryConfig(tx.category);
-  const IconComponent = config.icon;
-  
-  const formatTime = (isoString) => {
-    const date = new Date(isoString);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
-
   return (
-    <div className="swipe-item-container">
-      {/* Background red delete box */}
-      <div onClick={handleDeleteClick} className="swipe-delete-action">
-        <Trash2 size={18} />
-        <span>O'chirish</span>
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}>
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '80px',
+        backgroundColor: 'var(--expense-color)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <button onClick={() => onDelete(tx.id)} style={{ background: 'none', border: 'none', color: 'white', padding: '20px' }}>
+          <Trash2 size={20} />
+        </button>
       </div>
-
-      {/* Slideable transaction card */}
       <div 
-        className="transaction-card swipe-front"
+        className="transaction-item"
+        style={{ transform: `translateX(${offsetX}px)`, transition: offsetX === 0 || offsetX === -80 ? 'transform 0.2s ease-out' : 'none' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ 
-          transform: `translateX(${offsetX}px)`, 
-          transition: offsetX === 0 || offsetX === -80 ? 'transform 0.2s ease-out' : 'none'
-        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div className="tx-icon-box" style={{ backgroundColor: config.bg, color: config.color }}>
-            <IconComponent size={20} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          <div className="tx-icon" style={{ backgroundColor: conf.bg, color: conf.color }}>
+            <Icon size={18} />
           </div>
-          <div>
-            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: '0 0 2px 0' }}>
+          <div className="tx-details">
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px', color: 'var(--text-color)' }}>
               {t.categories[tx.category] || tx.category}
             </h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--hint-color)' }}>
-                {formatTime(tx.date)}
-              </span>
-              {tx.description && (
-                <>
-                  <span style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: 'var(--hint-color)' }}></span>
-                  <span style={{ fontSize: '11px', color: 'var(--hint-color)', maxWidth: '140px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {tx.description}
-                  </span>
-                </>
-              )}
-            </div>
+            <p style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{tx.description || t.categories[tx.category]}</p>
           </div>
         </div>
-
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ 
-            fontSize: '15px', 
-            fontWeight: '900', 
+        <div className="tx-amount" style={{ textAlign: 'right' }}>
+          <p style={{ 
+            fontSize: '14px', 
+            fontWeight: '700', 
             color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)' 
           }}>
-            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {t.currencySymbol}
-          </span>
+            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function Dashboard({ transactions, stats, formatAmount, onDelete, onAdd, t, lang }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Barchasi');
-  const [tiltStyle, setTiltStyle] = useState({});
-  const cardRef = useRef(null);
+function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_URL, tgUser, showToast }) {
+  const [activeTab, setActiveTab] = useState('kategoriya'); // 'kategoriya' or 'tranzaksiya'
+  const [isExporting, setIsExporting] = useState(false);
+  const pdfRef = useRef(null);
 
-  // Budget calculations
-  const budgetProgress = stats.budget > 0 ? (stats.totalExpense / stats.budget) * 100 : 0;
-  const isBudgetExceeded = stats.budget > 0 && stats.totalExpense > stats.budget;
-  const budgetRemaining = stats.budget - stats.totalExpense;
+  // Group transactions for "Tranzaksiya" tab
+  const groupedDays = groupTransactionsByDay(transactions);
 
-  // Filter transactions dynamically based on search and category filters
-  const filteredTransactions = transactions.filter(tx => {
-    const matchesSearch = 
-      (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (tx.category || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const displayCategory = tx.category === 'Daromad' ? 'Daromad' : tx.category;
-    const matchesCategory = selectedCategory === 'Barchasi' || displayCategory === selectedCategory;
+  // Filter out 'Xazna' from display if needed, but the stats already computes it correctly
+  
+  const incomeCount = transactions.filter(t => t.type === 'income').length;
+  const expenseCount = transactions.filter(t => t.type === 'expense').length;
 
-    return matchesSearch && matchesCategory;
-  });
+  const totalOps = incomeCount + expenseCount;
+  const progressPercent = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : (stats.totalExpense > 0 ? 100 : 0);
 
-  const groupedDays = groupTransactionsByDay(filteredTransactions);
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+      
+      const element = pdfRef.current;
+      const opt = {
+        margin:       10,
+        filename:     'Hisobot.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-  // 3D Parallax Card Tilt handlers
-  const handleMouseMove = (e) => {
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
+      // Generate base64 PDF
+      const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
+      
+      // Send to backend to forward to Telegram Bot
+      const res = await fetch(`${API_URL}/api/send-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-user-id': String(tgUser.id)
+        },
+        body: JSON.stringify({ pdfBase64, filename: `Hisobot_${new Date().toISOString().substring(0,10)}.pdf` })
+      });
 
-    const rotateX = -(y / (rect.height / 2)) * 12; 
-    const rotateY = (x / (rect.width / 2)) * 12;
-
-    setTiltStyle({
-      transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
-      transition: 'transform 0.1s ease'
-    });
-  };
-
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 0) return;
-    const touch = e.touches[0];
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = touch.clientX - rect.left - rect.width / 2;
-    const y = touch.clientY - rect.top - rect.height / 2;
-
-    const rotateX = -(y / (rect.height / 2)) * 10;
-    const rotateY = (x / (rect.width / 2)) * 10;
-
-    setTiltStyle({
-      transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
-      transition: 'transform 0.1s ease'
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setTiltStyle({
-      transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-      transition: 'transform 0.4s ease-out'
-    });
+      if (!res.ok) throw new Error('Failed to send PDF');
+      
+      showToast(t.toastSaved || 'PDF telegram bot orqali yuborildi!', 'success');
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      showToast(t.toastError || 'PDF yuborishda xatolik', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* 3D Parallax Balance Card (Focused on balance only) */}
-      <div 
-        ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleMouseLeave}
-        className="balance-card-container"
-      >
-        <div className="balance-card" style={tiltStyle}>
-          {/* Ambient card glows */}
-          <div className="card-ambient-glow"></div>
-          
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <span className="card-label">{t.totalBalance}</span>
-            <h1 className="card-balance">
-              <AnimatedCounter value={stats.balance} /> <span style={{ fontSize: '20px', fontWeight: '800' }}>{t.currencySymbol}</span>
-            </h1>
-            
-            {/* Minimal Neon Glow Highlight bar inside card */}
-            <div style={{ 
-              marginTop: '16px', 
-              height: '4px', 
-              width: '100%', 
-              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${Math.min(Math.max((stats.balance / (stats.totalIncome || 1)) * 100, 0), 100)}%`, 
-                backgroundColor: 'var(--income-color)',
-                boxShadow: '0 0 8px var(--income-color)',
-                transition: 'width 0.8s ease-out'
-              }}></div>
-            </div>
+    <div style={{ paddingBottom: '30px' }} ref={pdfRef}>
+      {/* Top Balance Card */}
+      <div style={{
+        background: 'var(--secondary-bg-color)',
+        borderRadius: '24px',
+        padding: '20px',
+        marginBottom: '20px',
+        border: '1px solid var(--card-border)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--hint-color)', fontWeight: '600' }}>Umumiy aylanma:</span>
+          <span style={{ fontSize: '15px', fontWeight: '800', color: stats.balance < 0 ? 'var(--expense-color)' : 'var(--text-color)' }}>
+            {stats.balance < 0 ? '-' : ''}{formatAmount(Math.abs(stats.balance))} <span style={{ fontSize: '11px' }}>UZS</span>
+          </span>
+        </div>
 
-            {/* Divider Line */}
-            <div style={{ 
-              margin: '18px 0 14px 0', 
-              height: '1px', 
-              backgroundColor: 'rgba(255, 255, 255, 0.08)' 
-            }}></div>
-            
-            {/* Income & Expense Side-by-Side (Yonma-yon) Grid inside Card */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                  <TrendingUp size={11} color="var(--income-color)" />
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
-                    {t.monthlyIncome}
-                  </span>
-                </div>
-                <span style={{ fontSize: '15px', fontWeight: '900', color: 'var(--income-color)' }}>
-                  +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '10px', fontWeight: '700' }}>{t.currencySymbol}</span>
-                </span>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.15)', borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingUp size={12} color="var(--income-color)" />
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                  <TrendingDown size={11} color="var(--expense-color)" />
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
-                    {t.monthlyExpense}
-                  </span>
-                </div>
-                <span style={{ fontSize: '15px', fontWeight: '900', color: 'var(--expense-color)' }}>
-                  -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '10px', fontWeight: '700' }}>{t.currencySymbol}</span>
-                </span>
-              </div>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-color)' }}>Kirim</span>
             </div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--income-color)', marginBottom: '4px' }}>
+              +{formatAmount(stats.totalIncome)}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{incomeCount} ta operatsiya</div>
           </div>
+
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.15)', borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--expense-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingDown size={12} color="var(--expense-color)" />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-color)' }}>Chiqim</span>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--expense-color)', marginBottom: '4px' }}>
+              -{formatAmount(stats.totalExpense)}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{expenseCount} ta operatsiya</div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ position: 'relative', height: '28px', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '14px', overflow: 'hidden' }}>
+           {/* Diagonal stripes background for the green part can be added via css, but simple color is fine */}
+           <div style={{ 
+             position: 'absolute', top: 0, left: 0, bottom: 0, 
+             width: '100%', 
+             background: 'repeating-linear-gradient(45deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.3) 10px, rgba(16, 185, 129, 0.4) 10px, rgba(16, 185, 129, 0.4) 20px)'
+           }}></div>
+           
+           <div style={{
+             position: 'absolute', top: 0, right: 0, bottom: 0,
+             background: 'var(--expense-color)',
+             width: `${progressPercent}%`,
+             borderRadius: '14px',
+             display: 'flex', alignItems: 'center', justifyContent: 'center',
+             color: 'white', fontSize: '11px', fontWeight: '800'
+           }}>
+             {progressPercent > 15 ? `-${progressPercent}%` : ''}
+           </div>
+           {progressPercent <= 15 && progressPercent > 0 && (
+             <div style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', color: 'white', fontSize: '11px', fontWeight: '800' }}>
+               -{progressPercent}%
+             </div>
+           )}
         </div>
       </div>
 
-      {/* Budget Limit Tracker */}
-      {stats.budget > 0 && (
-        <div className="budget-alert-box" style={{
-          backgroundColor: isBudgetExceeded ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-          border: isBudgetExceeded ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid var(--card-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '16px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <AlertTriangle size={15} color={isBudgetExceeded ? 'var(--expense-color)' : 'var(--hint-color)'} />
-              <span style={{ fontSize: '12px', fontWeight: '800', color: isBudgetExceeded ? 'var(--expense-color)' : 'var(--text-color)' }}>
-                {isBudgetExceeded ? 'Byudjet oshib ketdi!' : t.remainingBudget}
-              </span>
-            </div>
-            <span style={{ fontSize: '12px', fontWeight: '900', color: isBudgetExceeded ? 'var(--expense-color)' : 'var(--income-color)' }}>
-              {isBudgetExceeded ? '-' : ''}{formatAmount(Math.abs(budgetRemaining))} {t.currencySymbol}
-            </span>
-          </div>
-          
-          <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ 
-              height: '100%', 
-              width: `${Math.min(budgetProgress, 100)}%`, 
-              backgroundColor: isBudgetExceeded ? 'var(--expense-color)' : 'var(--button-color)',
-              boxShadow: isBudgetExceeded ? '0 0 6px var(--expense-color)' : 'none',
-              transition: 'width 0.4s ease-out'
-            }}></div>
-          </div>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--hint-color)', marginTop: '6px' }}>
-            <span>{formatAmount(stats.totalExpense)} {t.currencySymbol}</span>
-            <span>{t.budget}: {formatAmount(stats.budget)} {t.currencySymbol}</span>
-          </div>
+      {/* Tab Switcher */}
+      <div className="tabs-container">
+        <button 
+          className={`tab-btn ${activeTab === 'kategoriya' ? 'active' : ''}`}
+          onClick={() => setActiveTab('kategoriya')}
+        >
+          Kategoriya
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'tranzaksiya' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tranzaksiya')}
+        >
+          Tranzaksiya
+        </button>
+      </div>
+
+      {/* Content based on Tab */}
+      {activeTab === 'kategoriya' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {stats.categories && stats.categories.length > 0 ? stats.categories.map(cat => {
+            const conf = getCategoryConfig(cat.name);
+            const Icon = conf.icon;
+            return (
+              <div key={cat.name} style={{
+                background: 'var(--secondary-bg-color)',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                border: '1px solid var(--card-border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: conf.bg, color: conf.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-color)' }}>{t.categories[cat.name] || cat.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{cat.count} ta operatsiya</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {cat.income > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--income-color)' }}>+{formatAmount(cat.income)}</div>}
+                  {cat.expense > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--expense-color)' }}>-{formatAmount(cat.expense)}</div>}
+                </div>
+              </div>
+            );
+          }) : (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--hint-color)' }}>Kategoriyalar yo'q</div>
+          )}
         </div>
       )}
 
-      {/* Transaction History Filter and List */}
-      <div className="section-title-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-        <h3 style={{ margin: 0 }}>Tarix</h3>
-      </div>
-
-      {/* Elegant search filter */}
-      <div className="search-bar-wrapper">
-        <Search className="search-icon" size={16} />
-        <input 
-          type="text" 
-          placeholder="Tranzaksiyalarni qidirish..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="search-input"
-        />
-      </div>
-
-      {/* Filter Categories Horizontal Scroll */}
-      <div className="categories-filter-scroll">
-        {['Barchasi', 'Oziq-ovqat', 'Transport', 'Xaridlar', 'Ko\'ngilochar', 'Kafe', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Daromad', 'Boshqa'].map(cat => (
-          <button
-            key={cat}
-            onClick={() => {
-              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-              setSelectedCategory(cat);
-            }}
-            className={`filter-cat-btn ${selectedCategory === cat ? 'active' : ''}`}
-          >
-            {cat === 'Barchasi' ? 'Barchasi' : (t.categories[cat] || cat)}
-          </button>
-        ))}
-      </div>
-
-      {/* Transaction Groups List */}
-      <div className="transactions-list">
-        {groupedDays.length === 0 ? (
-          <div className="empty-state">
-            <TrendingUp className="empty-state-icon" style={{ opacity: 0.2 }} />
-            <p>{t.noTransactions}</p>
-          </div>
-        ) : (
-          groupedDays.map(group => (
-            <div key={group.dateStr} className="daily-group-box">
-              {/* Day Header badge */}
-              <div className="daily-group-header">
-                <span className="daily-date">{formatDayHeader(group.dateStr, t, lang)}</span>
-                <div className="daily-totals">
-                  {group.dayIncome > 0 && <span className="daily-income">+{formatAmount(group.dayIncome)}</span>}
-                  {group.dayExpense > 0 && <span className="daily-expense">-{formatAmount(group.dayExpense)}</span>}
+      {activeTab === 'tranzaksiya' && (
+        <div className="transactions-list">
+          {groupedDays.length === 0 ? (
+            <div className="empty-state">
+              <TrendingUp className="empty-state-icon" style={{ opacity: 0.2 }} />
+              <p>{t.noTransactions}</p>
+            </div>
+          ) : (
+            groupedDays.map(group => (
+              <div key={group.dateStr} className="daily-group-box" style={{ marginBottom: '16px' }}>
+                <div className="daily-group-header" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="daily-date" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--hint-color)' }}>{formatDayHeader(group.dateStr, t, lang)}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {group.transactions.map(tx => (
+                    <TransactionItem 
+                      key={tx.id} 
+                      tx={tx} 
+                      formatAmount={formatAmount} 
+                      onDelete={onDelete}
+                      t={t}
+                    />
+                  ))}
                 </div>
               </div>
+            ))
+          )}
+        </div>
+      )}
 
-              {/* Transactions in Day */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {group.transactions.map(tx => (
-                  <TransactionItem 
-                    key={tx.id} 
-                    tx={tx} 
-                    formatAmount={formatAmount} 
-                    onDelete={onDelete}
-                    t={t}
-                  />
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      {/* PDF Export Button */}
+      <button 
+        onClick={handleExportPDF}
+        disabled={isExporting}
+        style={{
+          width: '100%',
+          marginTop: '24px',
+          padding: '16px',
+          borderRadius: '16px',
+          background: 'var(--button-color)',
+          color: 'white',
+          border: 'none',
+          fontSize: '14px',
+          fontWeight: '700',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          opacity: isExporting ? 0.7 : 1
+        }}
+      >
+        {isExporting ? <Loader size={18} className="spin-animation" /> : <Download size={18} />}
+        {t.downloadPdf}
+      </button>
     </div>
   );
 }

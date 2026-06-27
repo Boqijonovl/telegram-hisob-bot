@@ -13,11 +13,14 @@ import {
   Lock,
   FileCode,
   Printer,
-  Globe
+  Globe,
+  User
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import AddTransaction from './components/AddTransaction';
+import Profile from './components/Profile';
+import VaultModal from './components/VaultModal';
 import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
@@ -32,8 +35,9 @@ const getApiUrl = () => {
 const API_URL = getApiUrl();
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'settings'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile'
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVaultModal, setShowVaultModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [settings, setSettings] = useState({ budget: 0, isAdmin: false, is_blocked: false });
   const [loading, setLoading] = useState(true);
@@ -179,26 +183,34 @@ function App() {
 
     monthlyTransactions.forEach(tx => {
       const amount = parseFloat(tx.amount);
+      const isXazna = tx.category === 'Xazna';
+      
+      if (!categoryTotals[tx.category]) {
+        categoryTotals[tx.category] = { name: tx.category, income: 0, expense: 0, count: 0 };
+      }
+      
+      categoryTotals[tx.category].count += 1;
+
       if (tx.type === 'income') {
-        totalIncome += amount;
+        if (!isXazna) totalIncome += amount;
+        categoryTotals[tx.category].income += amount;
       } else {
-        totalExpense += amount;
-        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + amount;
+        if (!isXazna) totalExpense += amount;
+        categoryTotals[tx.category].expense += amount;
       }
     });
 
-    const categories = Object.keys(categoryTotals).map(name => ({
-      name,
-      amount: categoryTotals[name],
-      percentage: totalExpense > 0 ? Math.round((categoryTotals[name] / totalExpense) * 100) : 0
-    })).sort((a, b) => b.amount - a.amount);
+    const categories = Object.values(categoryTotals)
+      .filter(c => c.name !== 'Xazna') // Keep Xazna out of the main categories display if wanted, or leave it. We'll leave it for now.
+      .sort((a, b) => (b.expense + b.income) - (a.expense + a.income));
 
     return {
       balance: totalIncome - totalExpense,
       totalIncome,
       totalExpense,
       budget: settings.budget || 0,
-      categories
+      categories,
+      vaultBalance: categoryTotals['Xazna'] ? (categoryTotals['Xazna'].income - categoryTotals['Xazna'].expense) : 0
     };
   };
 
@@ -575,186 +587,27 @@ function App() {
             />
           )}
 
-          {activeTab === 'settings' && (
-            <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-              <div className="section-title-bar">
-                <h3>{t.settings}</h3>
-              </div>
-              <div className="settings-list">
-                {/* General Settings */}
-                <div className="settings-item">
-                  {/* Language Selector */}
-                  <div className="form-group">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Globe size={16} />
-                      Til / Язык / Language
-                    </label>
-                    <select 
-                      value={lang}
-                      onChange={(e) => {
-                        setLang(e.target.value);
-                        localStorage.setItem('appLang', e.target.value);
-                        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-                      }}
-                      className="text-input"
-                    >
-                      <option value="uz">O'zbekcha (UZ)</option>
-                      <option value="ru">Русский (RU)</option>
-                      <option value="en">English (EN)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">{t.budget}</label>
-                    <div style={{ position: 'relative' }}>
-                      <input 
-                        type="number"
-                        placeholder="Limit summasini kiriting"
-                        value={settings.budget || ''}
-                        onChange={(e) => handleUpdateSettings({ ...settings, budget: e.target.value })}
-                        className="text-input"
-                      />
-                      <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--hint-color)' }}>
-                        {t.currencySymbol}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '11px', color: 'var(--hint-color)', marginTop: '6px', display: 'block' }}>
-                      {t.budgetHint}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Exporters and Reset actions */}
-                <div className="settings-item" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <h4 style={{ fontSize: '12px', color: 'var(--hint-color)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                    {t.backupExport}
-                  </h4>
-                  
-                  {/* Print report to PDF */}
-                  <button 
-                    onClick={handlePrintReport}
-                    className="submit-btn" 
-                    style={{ margin: 0, padding: '10px', fontSize: '13px', backgroundColor: 'var(--button-color)', color: 'var(--button-text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                  >
-                    <Printer size={16} />
-                    {t.printReport}
-                  </button>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button 
-                      onClick={exportToCSV}
-                      className="submit-btn" 
-                      style={{ margin: 0, padding: '10px', fontSize: '12px', backgroundColor: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      <Download size={14} />
-                      {t.csvExport}
-                    </button>
-                    <button 
-                      onClick={exportToJSON}
-                      className="submit-btn" 
-                      style={{ margin: 0, padding: '10px', fontSize: '12px', backgroundColor: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      <FileCode size={14} />
-                      {t.jsonExport}
-                    </button>
-                  </div>
-
-                  <button 
-                    onClick={handleResetData}
-                    className="submit-btn" 
-                    style={{ margin: '8px 0 0 0', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--expense-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                  >
-                    <Trash2 size={16} />
-                    {t.deleteAll}
-                  </button>
-                </div>
-
-                {/* Bot Creator Admin Control Panel Panel */}
-                {settings.isAdmin && (
-                  <div className="settings-item admin-panel-box" style={{ border: '1px solid rgba(59, 130, 246, 0.2)', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.4), rgba(59, 130, 246, 0.05))', borderRadius: 'var(--radius-md)', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--button-color)' }}>
-                      <ShieldAlert size={20} />
-                      <h4 style={{ fontSize: '14px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-                        {t.adminPanel}
-                      </h4>
-                    </div>
-
-                    {/* Broadcast Messaging */}
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ color: 'var(--text-color)' }}>{t.broadcastLabel}</label>
-                      <textarea
-                        rows="3"
-                        placeholder={t.broadcastPlaceholder}
-                        value={adminBroadcastMsg}
-                        onChange={(e) => setAdminBroadcastMsg(e.target.value)}
-                        className="text-input"
-                        style={{ fontFamily: 'inherit', fontSize: '13px', resize: 'none', padding: '10px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSendBroadcast}
-                        disabled={!adminBroadcastMsg.trim()}
-                        className="submit-btn"
-                        style={{ margin: '8px 0 0 0', padding: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                      >
-                        <Send size={14} />
-                        {t.broadcastBtn}
-                      </button>
-                    </div>
-
-                    {/* Registered Users List */}
-                    <div className="admin-users-list-section" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '14px' }}>
-                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-color)', marginBottom: '8px' }}>
-                        <Users size={15} />
-                        {t.usersList} ({adminUsers.length} ta)
-                      </label>
-                      
-                      <div className="admin-users-scroll" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
-                        {adminUsers.map(user => {
-                          const isSelf = String(user.user_id) === String(tgUser.id);
-                          return (
-                            <div key={user.user_id} className="admin-user-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--card-border)', borderRadius: '6px' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxWidth: '65%' }}>
-                                <span style={{ fontSize: '12px', fontWeight: '700', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                  {user.first_name || 'Noma\'lum'} {isSelf ? '(Siz)' : ''}
-                                </span>
-                                <span style={{ fontSize: '10px', color: 'var(--hint-color)' }}>
-                                  ID: {user.user_id} {user.username ? `@${user.username}` : ''}
-                                </span>
-                              </div>
-
-                              <button
-                                type="button"
-                                disabled={isSelf} // Cannot block oneself
-                                onClick={() => handleToggleBlock(user.user_id, user.is_blocked)}
-                                style={{ 
-                                  fontSize: '11px', 
-                                  fontWeight: '700', 
-                                  padding: '5px 10px', 
-                                  borderRadius: '12px', 
-                                  border: 'none',
-                                  cursor: isSelf ? 'not-allowed' : 'pointer',
-                                  backgroundColor: user.is_blocked ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                                  color: user.is_blocked ? 'var(--income-color)' : 'var(--expense-color)',
-                                  transition: 'background-color 0.2s'
-                                }}
-                              >
-                                {user.is_blocked ? t.unblock : t.block}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="settings-item" style={{ textAlign: 'center', color: 'var(--hint-color)', fontSize: '13px' }}>
-                  <p>Hisob Bot v1.5.0 (Ultimate)</p>
-                  <p style={{ marginTop: '4px' }}>Telegram Mini App loyihasi</p>
-                </div>
-              </div>
-            </div>
+          {activeTab === 'profile' && (
+            <Profile
+              tgUser={tgUser}
+              settings={settings}
+              t={t}
+              lang={lang}
+              setLang={(l) => {
+                setLang(l);
+                localStorage.setItem('appLang', l);
+              }}
+              vaultBalance={monthlyStats.vaultBalance}
+              onOpenVault={() => setShowVaultModal(true)}
+              isAdmin={settings.isAdmin}
+              adminUsers={adminUsers}
+              adminBroadcastMsg={adminBroadcastMsg}
+              setAdminBroadcastMsg={setAdminBroadcastMsg}
+              handleSendBroadcast={handleSendBroadcast}
+              handleToggleBlock={handleToggleBlock}
+              formatAmount={formatAmount}
+              onReset={handleResetData}
+            />
           )}
         </>
       )}
@@ -768,38 +621,52 @@ function App() {
         />
       )}
 
+      {/* Vault Modal */}
+      {showVaultModal && (
+        <VaultModal 
+          onClose={() => setShowVaultModal(false)}
+          vaultBalance={monthlyStats.vaultBalance}
+          onSubmit={async (tx) => {
+            await handleAddTransaction(tx);
+            setShowVaultModal(false);
+          }}
+          t={t}
+          formatAmount={formatAmount}
+        />
+      )}
+
       {/* Persistent Floating Bottom Navigation Bar */}
-      <nav className="bottom-nav">
+      <nav className="floating-nav">
         <button 
           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
-          <LayoutDashboard className="nav-icon" />
-          <span>{t.dashboard}</span>
-        </button>
-
-        <button 
-          className="nav-item-center"
-          onClick={() => setShowAddModal(true)}
-          aria-label="Yangi tranzaksiya"
-        >
-          <Plus size={28} />
+          <LayoutDashboard size={22} />
+          <span style={{ fontSize: '10px', marginTop: '4px' }}>{t.dashboard}</span>
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => setActiveTab('analytics')}
         >
-          <PieChart className="nav-icon" />
-          <span>{t.analytics}</span>
+          <PieChart size={22} />
+          <span style={{ fontSize: '10px', marginTop: '4px' }}>{t.analytics}</span>
         </button>
 
         <button 
-          className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
+          className="nav-item-plus"
+          onClick={() => setShowAddModal(true)}
+          aria-label="Yangi tranzaksiya"
         >
-          <Settings className="nav-icon" />
-          <span>{t.settings}</span>
+          <Plus size={26} />
+        </button>
+
+        <button 
+          className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <User size={22} />
+          <span style={{ fontSize: '10px', marginTop: '4px' }}>{t.profile || 'Profil'}</span>
         </button>
       </nav>
     </div>

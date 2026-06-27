@@ -49,6 +49,13 @@ export const translations = {
     originalAmount: "Aslida",
     today: "Bugun",
     yesterday: "Kecha",
+    profile: "Profil",
+    history: "Operatsiyalar tarixi",
+    vault: "Xazna",
+    depositVault: "Xaznaga o'tkazish",
+    withdrawVault: "Xaznadan olish",
+    vaultBalance: "Xaznadagi mablag'",
+    downloadPdf: "PDF qilib yuklab olish",
     // Categories translation helper
     categories: {
       "Oziq-ovqat": "Oziq-ovqat",
@@ -117,6 +124,13 @@ export const translations = {
     originalAmount: "Было",
     today: "Сегодня",
     yesterday: "Вчера",
+    profile: "Профиль",
+    history: "История операций",
+    vault: "Сейф",
+    depositVault: "Пополнить сейф",
+    withdrawVault: "Снять из сейфа",
+    vaultBalance: "Средства в сейфе",
+    downloadPdf: "Скачать как PDF",
     // Categories translation helper
     categories: {
       "Oziq-ovqat": "Продукты питания",
@@ -185,6 +199,13 @@ export const translations = {
     originalAmount: "Original",
     today: "Today",
     yesterday: "Yesterday",
+    profile: "Profile",
+    history: "Transaction History",
+    vault: "Vault",
+    depositVault: "Deposit to Vault",
+    withdrawVault: "Withdraw from Vault",
+    vaultBalance: "Vault Balance",
+    downloadPdf: "Download as PDF",
     // Categories translation helper
     categories: {
       "Oziq-ovqat": "Food & Groceries",
