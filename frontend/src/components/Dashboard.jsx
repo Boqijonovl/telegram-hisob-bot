@@ -159,7 +159,9 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
   
   const formatTime = (isoString) => {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   };
 
   return (
