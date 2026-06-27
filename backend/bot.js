@@ -308,14 +308,14 @@ Hisob-kitob botiga xush kelibsiz!
     const progressMsg = await ctx.reply("🎙 Ovozli xabar eshitilmoqda, tahlil qilinmoqda...");
 
     try {
-      const hfToken = process.env.HUGGINGFACE_TOKEN;
-      if (!hfToken) {
+      const groqToken = process.env.GROQ_API_KEY;
+      if (!groqToken) {
         return ctx.telegram.editMessageText(
           ctx.chat.id,
           progressMsg.message_id,
           null,
-          "⚠️ Ovozli xabarlar bilan ishlash uchun HUGGINGFACE_TOKEN o'rnatilishi shart. O'rnatish yo'riqnomasi uchun /help buyrug'ini bosing."
-        );
+          "⚠️ Ovozli xabarlar bilan ishlash uchun GROQ_API_KEY o'rnatilishi shart."
+        ).catch(() => {});
       }
 
       // Download file stream
@@ -328,53 +328,33 @@ Hisob-kitob botiga xush kelibsiz!
         throw new Error(`Telegram API dan fayl yuklashda xatolik: ${err.message}`);
       }
 
-      // Submit to Hugging Face Whisper Large v3 (with retry logic for 503 service loading)
+      // Submit to Groq Whisper Large v3
       let transcribedText = "";
-      let retries = 4;
-      
-      while (retries > 0) {
-        let hfRes;
-        try {
-          hfRes = await axios.post(
-            "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
-            Buffer.from(audioBuffer),
-            {
-              headers: {
-                Authorization: `Bearer ${hfToken}`,
-                "Content-Type": "audio/ogg"
-              },
-              validateStatus: () => true // Handle all HTTP statuses manually
-            }
-          );
-        } catch (err) {
-          throw new Error(`HuggingFace serveriga ulanishda xatolik: ${err.message}`);
+      try {
+        const blob = new Blob([audioBuffer], { type: 'audio/ogg' });
+        const formData = new FormData();
+        formData.append('file', blob, 'audio.ogg');
+        formData.append('model', 'whisper-large-v3');
+        formData.append('language', 'uz');
+        formData.append('response_format', 'json');
+
+        const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqToken}`
+          },
+          body: formData
+        });
+
+        if (!groqRes.ok) {
+          const errData = await groqRes.text();
+          throw new Error(`Groq API xatosi (${groqRes.status}): ${errData}`);
         }
 
-        if (hfRes.status === 200) {
-          const hfData = hfRes.data;
-          transcribedText = hfData.text || "";
-          break; // successfully transcribed!
-        }
-
-        const errJson = hfRes.data || {};
-        
-        // Handle 503 model currently loading state
-        if (hfRes.status === 503 && errJson.estimated_time) {
-          console.log(`HuggingFace model is loading. Waiting ${errJson.estimated_time}s before retry...`);
-          const waitTime = Math.min(Math.ceil(errJson.estimated_time), 6) * 1000;
-          
-          await ctx.telegram.editMessageText(
-            ctx.chat.id,
-            progressMsg.message_id,
-            null,
-            `🎙 Model yuklanmoqda (kutish: ~${Math.ceil(waitTime / 1000)} soniya)...`
-          ).catch(() => {});
-          
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          retries--;
-        } else {
-          throw new Error(errJson.error || `Hugging Face returned status ${hfRes.status}`);
-        }
+        const hfData = await groqRes.json();
+        transcribedText = hfData.text || "";
+      } catch (err) {
+        throw new Error(`Groq serveriga ulanishda xatolik: ${err.message}`);
       }
 
       if (!transcribedText.trim()) {
