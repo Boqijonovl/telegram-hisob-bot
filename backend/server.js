@@ -217,6 +217,34 @@ app.post('/api/admin/broadcast', async (req, res) => {
   }
 });
 
+// Get latest exchange rates from CBU (Central Bank of Uzbekistan)
+app.get('/api/rates', async (req, res) => {
+  try {
+    const response = await fetch('https://cbu.uz/uz/arkhiv-kursov-valyut/json/');
+    const data = await response.json();
+    
+    const usd = data.find(c => c.Ccy === 'USD');
+    const eur = data.find(c => c.Ccy === 'EUR');
+    const rub = data.find(c => c.Ccy === 'RUB');
+    
+    res.json({
+      USD: usd ? parseFloat(usd.Rate) : 12650,
+      EUR: eur ? parseFloat(eur.Rate) : 13540,
+      RUB: rub ? parseFloat(rub.Rate) : 140,
+      UZS: 1
+    });
+  } catch (error) {
+    console.error('Error fetching exchange rates from CBU:', error);
+    // Fallback static rates
+    res.json({
+      USD: 12650,
+      EUR: 13540,
+      RUB: 140,
+      UZS: 1
+    });
+  }
+});
+
 // Simple healthcheck
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });

@@ -12,11 +12,14 @@ import {
   ShieldAlert, 
   Lock,
   FileCode,
-  AlertTriangle
+  AlertTriangle,
+  Printer,
+  Globe
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import AddTransaction from './components/AddTransaction';
+import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
 const getApiUrl = () => {
@@ -39,11 +42,18 @@ function App() {
   const [tgUser, setTgUser] = useState(null);
   const [toast, setToast] = useState(null);
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  
+  // Multilingual & Rates States
+  const [lang, setLang] = useState(localStorage.getItem('appLang') || 'uz');
+  const [rates, setRates] = useState({ USD: 12650, EUR: 13540, RUB: 140, UZS: 1 });
 
   // Admin States
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminBroadcastMsg, setAdminBroadcastMsg] = useState('');
   const [isBlockedUser, setIsBlockedUser] = useState(false);
+
+  // Active translation helper
+  const t = translations[lang] || translations.uz;
 
   // Show status toasts
   const showToast = (message, type = 'success') => {
@@ -120,9 +130,13 @@ function App() {
         'x-telegram-username': encodeURIComponent(tgUser.username || '')
       };
       
-      const [txRes, settingsRes] = await Promise.all([
+      const [txRes, settingsRes, ratesRes] = await Promise.all([
         fetch(`${API_URL}/api/transactions`, { headers }),
-        fetch(`${API_URL}/api/settings`, { headers })
+        fetch(`${API_URL}/api/settings`, { headers }),
+        fetch(`${API_URL}/api/rates`).catch(err => {
+          console.error("Error loading rates:", err);
+          return null;
+        })
       ]);
 
       if (!txRes.ok || !settingsRes.ok) {
@@ -138,11 +152,16 @@ function App() {
         return;
       }
 
+      if (ratesRes && ratesRes.ok) {
+        const ratesData = await ratesRes.json();
+        setRates(ratesData);
+      }
+
       setTransactions(txData);
       setSettings(settingsData);
     } catch (error) {
       console.error('Error fetching data from backend:', error);
-      showToast('Backend server bilan bog\'lanishda xatolik yuz berdi!', 'error');
+      showToast(t.toastError || 'Xatolik yuz berdi!', 'error');
     } finally {
       setLoading(false);
     }
@@ -216,7 +235,7 @@ function App() {
         throw new Error(errJson.error || 'Tranzaksiya qo\'shishda xatolik');
       }
 
-      showToast(txData.type === 'income' ? 'Daromad qo\'shildi' : 'Harajat qo\'shildi');
+      showToast(txData.type === 'income' ? t.toastAddedIncome : t.toastAddedExpense);
       setShowAddModal(false);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       
@@ -231,7 +250,7 @@ function App() {
 
   // Delete Transaction handler
   const handleDeleteTransaction = async (txId) => {
-    const confirmText = "Ushbu operatsiyani o'chirmoqchimisiz?";
+    const confirmText = t.deleteConfirm;
     let shouldDelete = false;
 
     if (window.Telegram?.WebApp?.showConfirm) {
@@ -259,7 +278,7 @@ function App() {
         throw new Error(errJson.error || 'O\'chirishda xatolik yuz berdi');
       }
 
-      showToast('Operatsiya o\'chirildi');
+      showToast(t.toastDeleted);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       await fetchData();
     } catch (error) {
@@ -289,7 +308,7 @@ function App() {
 
       const data = await res.json();
       setSettings(prev => ({ ...prev, ...data }));
-      showToast('Sozlamalar saqlandi');
+      showToast(t.toastSaved);
     } catch (error) {
       console.error('Error updating settings:', error);
       showToast(error.message, 'error');
@@ -298,7 +317,7 @@ function App() {
 
   // Reset Account Data handler
   const handleResetData = async () => {
-    const confirmText = "Diqqat! Barcha operatsiyalar tarixi va limit sozlamalari butunlay o'chiriladi. Ushbu amalni ortga qaytarib bo'lmaydi. Rozimisiz?";
+    const confirmText = t.resetConfirm;
     let shouldReset = false;
 
     if (window.Telegram?.WebApp?.showConfirm) {
@@ -325,12 +344,18 @@ function App() {
 
       if (!res.ok) throw new Error('Ma\'lumotlarni tozalashda xatolik');
       
-      showToast('Hisobingiz tozalab tashlandi!');
+      showToast(t.toastReset);
       await fetchData();
     } catch (err) {
       console.error(err);
       showToast('Tizimni tozalab bo\'lmadi', 'error');
     }
+  };
+
+  // Trigger browser print dialog for HTML/PDF Report
+  const handlePrintReport = () => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+    window.print();
   };
 
   // Fetch admin users list
@@ -361,12 +386,12 @@ function App() {
         body: JSON.stringify({ targetUserId, isBlocked: !currentBlockStatus })
       });
       if (res.ok) {
-        showToast(currentBlockStatus ? 'Blokdan chiqarildi' : 'Foydalanuvchi bloklandi');
+        showToast(currentBlockStatus ? t.unblock : t.block);
         fetchAdminUsers();
       }
     } catch (err) {
       console.error(err);
-      showToast('Xatolik yuz berdi', 'error');
+      showToast(t.toastError, 'error');
     }
   };
 
@@ -387,10 +412,10 @@ function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        showToast(`Yuborildi! (Ok: ${data.successCount}, Xato: ${data.failCount})`);
+        showToast(`Broadcasting ok: ${data.successCount}, fail: ${data.failCount}`);
         setAdminBroadcastMsg('');
       } else {
-        showToast('Matn yuborishda xato', 'error');
+        showToast('Broadcast error', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -413,7 +438,7 @@ function App() {
   // Export history in CSV format
   const exportToCSV = () => {
     if (transactions.length === 0) {
-      showToast('Export qilish uchun tranzaksiyalar mavjud emas!', 'error');
+      showToast('No data', 'error');
       return;
     }
     
@@ -442,13 +467,13 @@ function App() {
     link.click();
     document.body.removeChild(link);
     
-    showToast('Tarix CSV shaklida yuklab olindi!');
+    showToast('CSV downloaded');
   };
 
   // Export history in JSON format
   const exportToJSON = () => {
     if (transactions.length === 0) {
-      showToast('Export qilish uchun tranzaksiyalar mavjud emas!', 'error');
+      showToast('No data', 'error');
       return;
     }
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
@@ -458,7 +483,7 @@ function App() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast('Zaxira JSON shaklida yuklab olindi!');
+    showToast('JSON backup downloaded');
   };
 
   // Blocked View Screen
@@ -481,6 +506,15 @@ function App() {
       {/* Ambient Glow Bubbles */}
       <div className="ambient-glow-1"></div>
       <div className="ambient-glow-2"></div>
+
+      {/* HTML PDF Report Header (Only visible on Print output) */}
+      <div className="print-only-header">
+        <h1>{t.printHeader}</h1>
+        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '6px' }}>
+          {tgUser?.first_name} (@{tgUser?.username}) | {currentMonthDate.toLocaleDateString(lang === 'uz' ? 'uz-UZ' : lang === 'ru' ? 'ru-RU' : 'en-US', { month: 'long', year: 'numeric' })}
+        </p>
+        <hr style={{ border: 'none', borderTop: '1px solid #cbd5e1', margin: '16px 0' }} />
+      </div>
 
       {/* Toast Alert */}
       {toast && (
@@ -516,7 +550,7 @@ function App() {
       {loading && transactions.length === 0 ? (
         <div className="loader-container">
           <div className="spinner"></div>
-          <p>Yuklanmoqda...</p>
+          <p>{t.loading}</p>
         </div>
       ) : (
         <>
@@ -525,7 +559,7 @@ function App() {
             <div className="month-navigation-bar">
               <button type="button" className="month-nav-btn" onClick={handlePrevMonth}>&larr;</button>
               <span className="month-nav-label">
-                {currentMonthDate.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })}
+                {currentMonthDate.toLocaleDateString(lang === 'uz' ? 'uz-UZ' : lang === 'ru' ? 'ru-RU' : 'en-US', { month: 'long', year: 'numeric' })}
               </span>
               <button type="button" className="month-nav-btn" onClick={handleNextMonth}>&rarr;</button>
             </div>
@@ -539,6 +573,8 @@ function App() {
               formatAmount={formatAmount}
               onDelete={handleDeleteTransaction}
               onAdd={handleAddTransaction}
+              t={t}
+              lang={lang}
             />
           )}
 
@@ -547,19 +583,42 @@ function App() {
               stats={monthlyStats} 
               currency={settings.currency}
               formatAmount={formatAmount}
+              t={t}
+              lang={lang}
             />
           )}
 
           {activeTab === 'settings' && (
             <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
               <div className="section-title-bar">
-                <h3>Sozlamalar</h3>
+                <h3>{t.settings}</h3>
               </div>
               <div className="settings-list">
                 {/* General Settings */}
                 <div className="settings-item">
+                  {/* Language Selector */}
                   <div className="form-group">
-                    <label className="form-label">Valyuta</label>
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Globe size={16} />
+                      Til / Язык / Language
+                    </label>
+                    <select 
+                      value={lang}
+                      onChange={(e) => {
+                        setLang(e.target.value);
+                        localStorage.setItem('appLang', e.target.value);
+                        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+                      }}
+                      className="text-input"
+                    >
+                      <option value="uz">O'zbekcha (UZ)</option>
+                      <option value="ru">Русский (RU)</option>
+                      <option value="en">English (EN)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">{t.currency}</label>
                     <select 
                       value={settings.currency}
                       onChange={(e) => handleUpdateSettings({ ...settings, currency: e.target.value })}
@@ -573,7 +632,7 @@ function App() {
                   </div>
                   
                   <div className="form-group">
-                    <label className="form-label">Oylik Byudjet (Limit)</label>
+                    <label className="form-label">{t.budget}</label>
                     <div style={{ position: 'relative' }}>
                       <input 
                         type="number"
@@ -587,7 +646,7 @@ function App() {
                       </span>
                     </div>
                     <span style={{ fontSize: '11px', color: 'var(--hint-color)', marginTop: '6px', display: 'block' }}>
-                      Oylik xarajatlaringiz limitdan oshganda analytics bo'limida ogohlantiriladi.
+                      {t.budgetHint}
                     </span>
                   </div>
                 </div>
@@ -595,8 +654,19 @@ function App() {
                 {/* Exporters and Reset actions */}
                 <div className="settings-item" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <h4 style={{ fontSize: '12px', color: 'var(--hint-color)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                    Zaxira & Eksport
+                    {t.backupExport}
                   </h4>
+                  
+                  {/* Print report to PDF */}
+                  <button 
+                    onClick={handlePrintReport}
+                    className="submit-btn" 
+                    style={{ margin: 0, padding: '10px', fontSize: '13px', backgroundColor: 'var(--button-color)', color: 'var(--button-text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <Printer size={16} />
+                    {t.printReport}
+                  </button>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button 
                       onClick={exportToCSV}
@@ -604,7 +674,7 @@ function App() {
                       style={{ margin: 0, padding: '10px', fontSize: '12px', backgroundColor: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
                       <Download size={14} />
-                      CSV yuklash
+                      {t.csvExport}
                     </button>
                     <button 
                       onClick={exportToJSON}
@@ -612,7 +682,7 @@ function App() {
                       style={{ margin: 0, padding: '10px', fontSize: '12px', backgroundColor: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
                       <FileCode size={14} />
-                      JSON yuklash
+                      {t.jsonExport}
                     </button>
                   </div>
 
@@ -622,7 +692,7 @@ function App() {
                     style={{ margin: '8px 0 0 0', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--expense-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
                     <Trash2 size={16} />
-                    Barcha ma'lumotlarni o'chirish
+                    {t.deleteAll}
                   </button>
                 </div>
 
@@ -632,16 +702,16 @@ function App() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--button-color)' }}>
                       <ShieldAlert size={20} />
                       <h4 style={{ fontSize: '14px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-                        Bot Admin Panel
+                        {t.adminPanel}
                       </h4>
                     </div>
 
                     {/* Broadcast Messaging */}
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ color: 'var(--text-color)' }}>Hamma foydalanuvchilarga xabar yuborish</label>
+                      <label className="form-label" style={{ color: 'var(--text-color)' }}>{t.broadcastLabel}</label>
                       <textarea
                         rows="3"
-                        placeholder="Xabar matnini yozing..."
+                        placeholder={t.broadcastPlaceholder}
                         value={adminBroadcastMsg}
                         onChange={(e) => setAdminBroadcastMsg(e.target.value)}
                         className="text-input"
@@ -655,7 +725,7 @@ function App() {
                         style={{ margin: '8px 0 0 0', padding: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                       >
                         <Send size={14} />
-                        Ommaviy yuborish (Broadcast)
+                        {t.broadcastBtn}
                       </button>
                     </div>
 
@@ -663,7 +733,7 @@ function App() {
                     <div className="admin-users-list-section" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '14px' }}>
                       <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-color)', marginBottom: '8px' }}>
                         <Users size={15} />
-                        Foydalanuvchilar ro'yxati ({adminUsers.length} ta)
+                        {t.usersList} ({adminUsers.length} ta)
                       </label>
                       
                       <div className="admin-users-scroll" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
@@ -696,7 +766,7 @@ function App() {
                                   transition: 'background-color 0.2s'
                                 }}
                               >
-                                {user.is_blocked ? 'Blokdan ochish' : 'Bloklash'}
+                                {user.is_blocked ? t.unblock : t.block}
                               </button>
                             </div>
                           );
@@ -707,7 +777,7 @@ function App() {
                 )}
 
                 <div className="settings-item" style={{ textAlign: 'center', color: 'var(--hint-color)', fontSize: '13px' }}>
-                  <p>Hisob Bot v1.2.0 (VIP)</p>
+                  <p>Hisob Bot v1.5.0 (Ultimate)</p>
                   <p style={{ marginTop: '4px' }}>Telegram Mini App loyihasi</p>
                 </div>
               </div>
@@ -722,6 +792,8 @@ function App() {
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddTransaction}
           currency={settings.currency}
+          rates={rates}
+          t={t}
         />
       )}
 
@@ -732,7 +804,7 @@ function App() {
           onClick={() => setActiveTab('dashboard')}
         >
           <LayoutDashboard className="nav-icon" />
-          <span>Dashboard</span>
+          <span>{t.dashboard}</span>
         </button>
 
         <button 
@@ -748,7 +820,7 @@ function App() {
           onClick={() => setActiveTab('analytics')}
         >
           <PieChart className="nav-icon" />
-          <span>Statistika</span>
+          <span>{t.analytics}</span>
         </button>
 
         <button 
@@ -756,7 +828,7 @@ function App() {
           onClick={() => setActiveTab('settings')}
         >
           <Settings className="nav-icon" />
-          <span>Sozlamalar</span>
+          <span>{t.settings}</span>
         </button>
       </nav>
     </div>

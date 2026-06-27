@@ -69,8 +69,8 @@ function AnimatedCounter({ value, duration = 800 }) {
   return new Intl.NumberFormat('uz-UZ').format(count);
 }
 
-// Format day header
-const formatDayHeader = (dateStr) => {
+// Format day header based on selected language
+const formatDayHeader = (dateStr, t, lang) => {
   const date = new Date(dateStr);
   const todayStr = new Date().toISOString().substring(0, 10);
   
@@ -78,12 +78,14 @@ const formatDayHeader = (dateStr) => {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().substring(0, 10);
 
+  const locale = lang === 'uz' ? 'uz-UZ' : lang === 'ru' ? 'ru-RU' : 'en-US';
+
   if (dateStr === todayStr) {
-    return "Bugun, " + date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
+    return `${t.today}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   } else if (dateStr === yesterdayStr) {
-    return "Kecha, " + date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
+    return `${t.yesterday}, ` + date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   } else {
-    return date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 };
 
@@ -114,7 +116,7 @@ const groupTransactionsByDay = (txList) => {
 };
 
 // Swipe-to-delete item wrapper
-function TransactionItem({ tx, currency, formatAmount, onDelete }) {
+function TransactionItem({ tx, currency, formatAmount, onDelete, t }) {
   const [startX, setStartX] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isSwiped, setIsSwiped] = useState(false);
@@ -180,20 +182,39 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
         onTouchEnd={handleTouchEnd}
         style={{ 
           transform: `translateX(${offsetX}px)`, 
-          transition: offsetX === 0 || offsetX === -80 ? 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+          transition: offsetX === 0 || offsetX === -80 ? 'transform 0.2s ease-out' : 'none'
         }}
       >
-        <div className="tx-left">
-          <div className="tx-icon-wrapper" style={{ backgroundColor: config.bg, color: config.color }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div className="tx-icon-box" style={{ backgroundColor: config.bg, color: config.color }}>
             <IconComponent size={20} />
           </div>
-          <div className="tx-details">
-            <h4>{tx.description || tx.category}</h4>
-            <p>{formatTime(tx.date)}</p>
+          <div>
+            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: '0 0 2px 0' }}>
+              {t.categories[tx.category] || tx.category}
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--hint-color)' }}>
+                {formatTime(tx.date)}
+              </span>
+              {tx.description && (
+                <>
+                  <span style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: 'var(--hint-color)' }}></span>
+                  <span style={{ fontSize: '11px', color: 'var(--hint-color)', maxWidth: '140px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {tx.description}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="tx-right">
-          <span className={`tx-amount ${tx.type}`}>
+
+        <div style={{ textAlign: 'right' }}>
+          <span style={{ 
+            fontSize: '15px', 
+            fontWeight: '900', 
+            color: tx.type === 'income' ? 'var(--income-color)' : 'var(--text-color)' 
+          }}>
             {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {currency}
           </span>
         </div>
@@ -202,7 +223,7 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
   );
 }
 
-function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAdd }) {
+function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAdd, t, lang }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Barchasi');
   const [tiltStyle, setTiltStyle] = useState({});
@@ -278,144 +299,177 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
         onMouseLeave={handleMouseLeave}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
-        className="balance-card" 
-        style={{ ...tiltStyle, marginBottom: '16px' }}
+        className="balance-card-container"
       >
-        <p className="balance-title">Umumiy balans</p>
-        <h1 className="balance-amount" style={{ marginBottom: 0 }}>
-          <AnimatedCounter value={stats.balance} /> <span>{currency}</span>
-        </h1>
+        <div className="balance-card" style={tiltStyle}>
+          {/* Ambient card glows */}
+          <div className="card-ambient-glow"></div>
+          
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <span className="card-label">{t.totalBalance}</span>
+            <h1 className="card-balance">
+              <AnimatedCounter value={stats.balance} /> <span style={{ fontSize: '20px', fontWeight: '800' }}>{currency}</span>
+            </h1>
+            
+            {/* Minimal Neon Glow Highlight bar inside card */}
+            <div style={{ 
+              marginTop: '20px', 
+              height: '4px', 
+              width: '100%', 
+              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${Math.min(Math.max((stats.balance / (stats.totalIncome || 1)) * 100, 0), 100)}%`, 
+                backgroundColor: 'var(--income-color)',
+                boxShadow: '0 0 8px var(--income-color)',
+                transition: 'width 0.8s ease-out'
+              }}></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Income & Expense Cards Grid (Separate VIP Cards) */}
-      <div className="stats-cards-grid">
-        <div className="stat-card income">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Daromad</span>
-            <div className="stat-card-icon-wrapper"><TrendingUp size={16} /></div>
+      {/* Income / Expense Overview Neon Highlights Grid */}
+      <div className="overview-stats-grid">
+        {/* Income Card */}
+        <div className="stats-card-green">
+          <div className="stats-card-ambient-glow"></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <TrendingUp size={16} color="var(--income-color)" />
+            <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--hint-color)' }}>
+              {t.monthlyIncome}
+            </span>
           </div>
-          <h3 className="stat-card-val">
-            +<AnimatedCounter value={stats.totalIncome} /> <span className="stat-card-curr">{currency}</span>
-          </h3>
+          <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--income-color)' }}>
+            +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{currency}</span>
+          </h2>
         </div>
 
-        <div className="stat-card expense">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Harajat</span>
-            <div className="stat-card-icon-wrapper"><TrendingDown size={16} /></div>
+        {/* Expense Card */}
+        <div className="stats-card-red">
+          <div className="stats-card-ambient-glow"></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <TrendingDown size={16} color="var(--expense-color)" />
+            <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--hint-color)' }}>
+              {t.monthlyExpense}
+            </span>
           </div>
-          <h3 className="stat-card-val">
-            -<AnimatedCounter value={stats.totalExpense} /> <span className="stat-card-curr">{currency}</span>
-          </h3>
+          <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--expense-color)' }}>
+            -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{currency}</span>
+          </h2>
         </div>
       </div>
 
-      {/* Budget Limit warning card */}
+      {/* Budget Limit Tracker */}
       {stats.budget > 0 && (
-        <div className="analytics-card" style={{ marginBottom: '24px', borderLeft: `4px solid ${isBudgetExceeded ? 'var(--expense-color)' : 'var(--button-color)'}` }}>
+        <div className="budget-alert-box" style={{
+          backgroundColor: isBudgetExceeded ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+          border: isBudgetExceeded ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid var(--card-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '16px',
+          marginBottom: '20px'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {isBudgetExceeded ? (
-                <>
-                  <AlertTriangle size={16} color="var(--expense-color)" />
-                  <span style={{ color: 'var(--expense-color)' }}>Limit oshib ketdi!</span>
-                </>
-              ) : (
-                <span>Oylik byudjet holati</span>
-              )}
-            </span>
-            <span style={{ fontSize: '12px', color: 'var(--hint-color)' }}>
-              {formatAmount(stats.totalExpense)} / {formatAmount(stats.budget)} {currency}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertTriangle size={15} color={isBudgetExceeded ? 'var(--expense-color)' : 'var(--hint-color)'} />
+              <span style={{ fontSize: '12px', fontWeight: '800', color: isBudgetExceeded ? 'var(--expense-color)' : 'var(--text-color)' }}>
+                {isBudgetExceeded ? 'Byudjet oshib ketdi!' : t.remainingBudget}
+              </span>
+            </div>
+            <span style={{ fontSize: '12px', fontWeight: '900', color: isBudgetExceeded ? 'var(--expense-color)' : 'var(--income-color)' }}>
+              {isBudgetExceeded ? '-' : ''}{formatAmount(Math.abs(budgetRemaining))} {currency}
             </span>
           </div>
-
-          <div className="progress-bar-container" style={{ height: '6px', marginBottom: '10px' }}>
-            <div 
-              className="progress-bar-fill" 
-              style={{ 
-                width: `${Math.min(budgetProgress, 100)}%`,
-                backgroundColor: isBudgetExceeded ? 'var(--expense-color)' : 'var(--button-color)'
-              }}
-            ></div>
+          
+          <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ 
+              height: '100%', 
+              width: `${Math.min(budgetProgress, 100)}%`, 
+              backgroundColor: isBudgetExceeded ? 'var(--expense-color)' : 'var(--button-color)',
+              boxShadow: isBudgetExceeded ? '0 0 6px var(--expense-color)' : 'none',
+              transition: 'width 0.4s ease-out'
+            }}></div>
           </div>
-
-          <p style={{ fontSize: '11px', color: 'var(--hint-color)' }}>
-            {isBudgetExceeded 
-              ? `Belgilangan limitdan ${formatAmount(Math.abs(budgetRemaining))} ${currency} ko'p sarflandi.`
-              : `Limit tugashiga yana ${formatAmount(budgetRemaining)} ${currency} qoldi.`}
-          </p>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--hint-color)', marginTop: '6px' }}>
+            <span>{formatAmount(stats.totalExpense)} {currency}</span>
+            <span>{t.budget}: {formatAmount(stats.budget)} {currency}</span>
+          </div>
         </div>
       )}
 
-      {/* Search & Category Filter Section */}
-      <div className="search-filter-section">
-        <div className="search-input-wrapper">
-          <Search size={16} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Operatsiyalardan qidirish..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="category-pills-list">
-          {['Barchasi', 'Oziq-ovqat', 'Transport', 'Kommunal', 'Xaridlar', 'Ko\'ngilochar', 'Sog\'liqni saqlash', 'Ta\'lim', 'Sovg\'alar', 'Daromad', 'Boshqa'].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+      {/* Transaction History Filter and List */}
+      <div className="section-title-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <h3 style={{ margin: 0 }}>Tarix</h3>
       </div>
 
-      {/* Recent Transactions Section */}
-      <div className="section-title-bar">
-        <h3>Operatsiyalar tarixi</h3>
+      {/* Elegant search filter */}
+      <div className="search-bar-wrapper">
+        <Search className="search-icon" size={16} />
+        <input 
+          type="text" 
+          placeholder="Tranzaksiyalarni qidirish..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
       </div>
 
-      {filteredTransactions.length === 0 ? (
-        <div className="empty-state">
-          <Coins className="empty-state-icon" />
-          <h4>Hech qanday operatsiya topilmadi</h4>
-          <p>
-            {searchQuery || selectedCategory !== 'Barchasi' 
-              ? "Qidiruv shartlariga mos keladigan operatsiya mavjud emas." 
-              : "Operatsiyalarni qo'shish uchun pastdagi '+' tugmasini bosing."}
-          </p>
-        </div>
-      ) : (
-        <div className="transaction-list">
-          {groupedDays.map((group) => (
-            <div key={group.dateStr} className="daily-group-wrapper" style={{ marginBottom: '20px' }}>
-              {/* Daily Group Header with aggregated sums */}
+      {/* Filter Categories Horizontal Scroll */}
+      <div className="categories-filter-scroll">
+        {['Barchasi', 'Oziq-ovqat', 'Transport', 'Xaridlar', 'Ko\'ngilochar', 'Kafe', 'Daromad', 'Boshqa'].map(cat => (
+          <button
+            key={cat}
+            onClick={() => {
+              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+              setSelectedCategory(cat);
+            }}
+            className={`filter-cat-btn ${selectedCategory === cat ? 'active' : ''}`}
+          >
+            {cat === 'Barchasi' ? 'Barchasi' : (t.categories[cat] || cat)}
+          </button>
+        ))}
+      </div>
+
+      {/* Transaction Groups List */}
+      <div className="transactions-list">
+        {groupedDays.length === 0 ? (
+          <div className="empty-state">
+            <Coins className="empty-state-icon" style={{ opacity: 0.2 }} />
+            <p>{t.noTransactions}</p>
+          </div>
+        ) : (
+          groupedDays.map(group => (
+            <div key={group.dateStr} className="daily-group-box">
+              {/* Day Header badge */}
               <div className="daily-group-header">
-                <span className="daily-date">{formatDayHeader(group.dateStr)}</span>
-                <span className="daily-totals">
-                  {group.dayIncome > 0 && <span className="daily-income">+{formatAmount(group.dayIncome)} </span>}
-                  {group.dayExpense > 0 && <span className="daily-expense">-{formatAmount(group.dayExpense)} {currency}</span>}
-                </span>
+                <span className="daily-date">{formatDayHeader(group.dateStr, t, lang)}</span>
+                <div className="daily-totals">
+                  {group.dayIncome > 0 && <span className="daily-income">+{formatAmount(group.dayIncome)}</span>}
+                  {group.dayExpense > 0 && <span className="daily-expense">-{formatAmount(group.dayExpense)}</span>}
+                </div>
               </div>
-              
-              <div className="daily-group-items">
-                {group.transactions.map((tx) => (
+
+              {/* Transactions in Day */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {group.transactions.map(tx => (
                   <TransactionItem 
                     key={tx.id} 
                     tx={tx} 
                     currency={currency} 
                     formatAmount={formatAmount} 
-                    onDelete={onDelete} 
+                    onDelete={onDelete}
+                    t={t}
                   />
                 ))}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

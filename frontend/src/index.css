@@ -1323,3 +1323,97 @@ body {
   box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.25) !important;
 }
+
+/* Print Only Layout styles */
+.print-only-header {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  .bottom-nav, 
+  .ambient-glow-1, 
+  .ambient-glow-2, 
+  .app-header, 
+  .submit-btn, 
+  .month-navigation-bar, 
+  .section-title-bar, 
+  .settings-item, 
+  .search-bar-wrapper,
+  .categories-filter-scroll,
+  .donut-tip,
+  .swipe-delete-action,
+  button {
+    display: none !important;
+  }
+  
+  .app-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  
+  .print-only-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .print-only-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+  }
+  
+  .balance-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-shadow: none !important;
+  }
+  
+  .card-label {
+    color: #64748b !important;
+  }
+  
+  .card-balance {
+    color: #0f172a !important;
+  }
+  
+  .stats-card-green, 
+  .stats-card-red {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  .stats-card-green h2 {
+    color: #16a34a !important;
+  }
+
+  .stats-card-red h2 {
+    color: #dc2626 !important;
+  }
+  
+  .transaction-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  
+  .daily-group-box {
+    page-break-inside: avoid;
+  }
+}
