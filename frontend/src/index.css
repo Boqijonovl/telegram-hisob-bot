@@ -1,31 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
 :root {
-  /* Telegram CSS Variables mapping or premium fallback values */
-  --bg-color: var(--tg-theme-bg-color, #0f172a);
+  /* Premium obsidian theme fallback colors */
+  --bg-color: var(--tg-theme-bg-color, #0b0f19);
   --text-color: var(--tg-theme-text-color, #f8fafc);
-  --hint-color: var(--tg-theme-hint-color, #64748b);
-  --link-color: var(--tg-theme-link-color, #38bdf8);
+  --hint-color: var(--tg-theme-hint-color, #94a3b8);
+  --link-color: var(--tg-theme-link-color, #818cf8);
   
-  --button-color: var(--tg-theme-button-color, #0284c7);
+  --button-color: var(--tg-theme-button-color, #6366f1);
   --button-text-color: var(--tg-theme-button-text-color, #ffffff);
   
   --secondary-bg-color: var(--tg-theme-secondary-bg-color, #1e293b);
   
-  /* Additional premium colors */
+  /* Vibrant tech-colors */
   --income-color: #10b981;
-  --income-bg: rgba(16, 185, 129, 0.15);
-  --expense-color: #ef4444;
-  --expense-bg: rgba(239, 68, 68, 0.15);
+  --income-bg: rgba(16, 185, 129, 0.12);
+  --expense-color: #f43f5e;
+  --expense-bg: rgba(244, 63, 94, 0.12);
   
-  --card-bg: var(--tg-theme-secondary-bg-color, #1e293b);
-  --card-border: rgba(255, 255, 255, 0.05);
-  --glow-color: rgba(2, 132, 199, 0.15);
+  --card-bg: rgba(30, 41, 59, 0.45);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --glow-color: rgba(99, 102, 241, 0.15);
   
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
   
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -39,11 +41,11 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
-  padding-bottom: calc(95px + env(safe-area-inset-bottom, 0px)); /* Safe padding for bottom nav */
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); /* Safe padding for bottom nav */
   min-height: 100vh;
-  min-height: 100dvh; /* Adapt dynamically to Telegram viewport */
+  min-height: 100dvh;
   transition: background-color var(--transition-normal), color var(--transition-normal);
   overflow-x: hidden;
 }
@@ -52,7 +54,7 @@ body {
 .app-container {
   max-width: 480px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 18px;
   animation: fadeIn var(--transition-normal);
 }
 
@@ -323,20 +325,22 @@ body {
 /* Floating Bottom Navigation Bar */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--card-border);
-  padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 12px)) 16px; /* Responsive mobile home indicator notch space */
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 100;
-  max-width: 480px;
+  max-width: 448px;
   margin: 0 auto;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
 }
 
 .nav-item {
@@ -349,7 +353,7 @@ body {
   color: var(--hint-color);
   cursor: pointer;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   width: 60px;
   transition: color var(--transition-fast);
 }
@@ -377,7 +381,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px var(--button-color);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
   border: none;
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
@@ -386,7 +390,7 @@ body {
 
 .nav-item-center:active {
   transform: scale(0.9) rotate(90deg);
-  box-shadow: 0 2px 6px var(--button-color);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
 }
 
 /* Slide Up Modal for adding transaction */
