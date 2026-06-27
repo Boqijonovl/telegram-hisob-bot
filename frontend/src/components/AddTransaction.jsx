@@ -6,8 +6,12 @@ const EXPENSE_CATEGORIES = [
   'Oziq-ovqat',
   'Transport',
   'Xaridlar',
-  'Ko\'ngilochar',
   'Kafe',
+  'Ko\'ngilochar',
+  'Kommunal',
+  'Sog\'liq',
+  'Ta\'lim',
+  'Xizmatlar',
   'Boshqa'
 ];
 

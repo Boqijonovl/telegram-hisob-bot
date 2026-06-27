@@ -14,7 +14,10 @@ import {
   AlertTriangle,
   Search,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  HeartPulse,
+  GraduationCap,
+  Settings
 } from 'lucide-react';
 
 // Map categories to appropriate Lucide icons and colors (Modern & Specific)
@@ -26,6 +29,9 @@ export const getCategoryConfig = (categoryName) => {
     'Xaridlar': { icon: ShoppingBag, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' },
     'Ko\'ngilochar': { icon: Gamepad2, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
     'Kafe': { icon: Coffee, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.12)' },
+    'Sog\'liq': { icon: HeartPulse, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
+    'Ta\'lim': { icon: GraduationCap, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)' },
+    'Xizmatlar': { icon: Settings, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
     'Maosh': { icon: Wallet, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
     'Biznes': { icon: Briefcase, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
     'Sovg\'alar': { icon: Gift, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
@@ -214,7 +220,7 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
           <span style={{ 
             fontSize: '15px', 
             fontWeight: '900', 
-            color: tx.type === 'income' ? 'var(--income-color)' : 'var(--text-color)' 
+            color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)' 
           }}>
             {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)} {t.currencySymbol}
           </span>
@@ -314,7 +320,7 @@ function Dashboard({ transactions, stats, formatAmount, onDelete, onAdd, t, lang
             
             {/* Minimal Neon Glow Highlight bar inside card */}
             <div style={{ 
-              marginTop: '20px', 
+              marginTop: '16px', 
               height: '4px', 
               width: '100%', 
               backgroundColor: 'rgba(255, 255, 255, 0.1)', 
@@ -329,38 +335,40 @@ function Dashboard({ transactions, stats, formatAmount, onDelete, onAdd, t, lang
                 transition: 'width 0.8s ease-out'
               }}></div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Income / Expense Overview Neon Highlights Grid */}
-      <div className="overview-stats-grid">
-        {/* Income Card */}
-        <div className="stats-card-green">
-          <div className="stats-card-ambient-glow"></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <TrendingUp size={16} color="var(--income-color)" />
-            <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--hint-color)' }}>
-              {t.monthlyIncome}
-            </span>
+            {/* Divider Line */}
+            <div style={{ 
+              margin: '18px 0 14px 0', 
+              height: '1px', 
+              backgroundColor: 'rgba(255, 255, 255, 0.08)' 
+            }}></div>
+            
+            {/* Income & Expense Side-by-Side (Yonma-yon) Grid inside Card */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                  <TrendingUp size={11} color="var(--income-color)" />
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
+                    {t.monthlyIncome}
+                  </span>
+                </div>
+                <span style={{ fontSize: '15px', fontWeight: '900', color: 'var(--income-color)' }}>
+                  +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '10px', fontWeight: '700' }}>{t.currencySymbol}</span>
+                </span>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                  <TrendingDown size={11} color="var(--expense-color)" />
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
+                    {t.monthlyExpense}
+                  </span>
+                </div>
+                <span style={{ fontSize: '15px', fontWeight: '900', color: 'var(--expense-color)' }}>
+                  -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '10px', fontWeight: '700' }}>{t.currencySymbol}</span>
+                </span>
+              </div>
+            </div>
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--income-color)' }}>
-            +<AnimatedCounter value={stats.totalIncome} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{t.currencySymbol}</span>
-          </h2>
-        </div>
-
-        {/* Expense Card */}
-        <div className="stats-card-red">
-          <div className="stats-card-ambient-glow"></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <TrendingDown size={16} color="var(--expense-color)" />
-            <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--hint-color)' }}>
-              {t.monthlyExpense}
-            </span>
-          </div>
-          <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0, color: 'var(--expense-color)' }}>
-            -<AnimatedCounter value={stats.totalExpense} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>{t.currencySymbol}</span>
-          </h2>
         </div>
       </div>
 
@@ -421,7 +429,7 @@ function Dashboard({ transactions, stats, formatAmount, onDelete, onAdd, t, lang
 
       {/* Filter Categories Horizontal Scroll */}
       <div className="categories-filter-scroll">
-        {['Barchasi', 'Oziq-ovqat', 'Transport', 'Xaridlar', 'Ko\'ngilochar', 'Kafe', 'Daromad', 'Boshqa'].map(cat => (
+        {['Barchasi', 'Oziq-ovqat', 'Transport', 'Xaridlar', 'Ko\'ngilochar', 'Kafe', 'Kommunal', 'Sog\'liq', 'Ta\'lim', 'Xizmatlar', 'Daromad', 'Boshqa'].map(cat => (
           <button
             key={cat}
             onClick={() => {
