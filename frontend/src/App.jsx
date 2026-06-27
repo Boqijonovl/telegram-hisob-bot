@@ -10,7 +10,7 @@ const getApiUrl = () => {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:5000';
   }
-  return `http://${hostname}:5000`;
+  return 'https://hisob-bot.onrender.com';
 };
 
 const API_URL = getApiUrl();
