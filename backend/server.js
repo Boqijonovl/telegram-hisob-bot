@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { db } from './db.js';
-import { initBot, sendBudgetAlert } from './bot.js';
+import { initBot, sendBudgetAlert, broadcastMessage } from './bot.js';
 
 dotenv.config();
 
@@ -114,12 +114,18 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Get settings
+// Get settings (captures Telegram names and returns isAdmin flag)
 app.get('/api/settings', async (req, res) => {
   try {
     const userId = getUserId(req);
-    const settings = await db.getSettings(userId);
-    res.json(settings);
+    const firstName = decodeURIComponent(req.headers['x-telegram-first-name'] || '');
+    const username = decodeURIComponent(req.headers['x-telegram-username'] || '');
+
+    const settings = await db.getSettings(userId, firstName, username);
+    
+    // Check if user is the admin
+    const isAdmin = process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID);
+    res.json({ ...settings, isAdmin: !!isAdmin });
   } catch (error) {
     console.error('Error fetching settings:', error);
     res.status(500).json({ error: 'Server error' });
@@ -140,6 +146,73 @@ app.post('/api/settings', async (req, res) => {
     res.json(updatedSettings);
   } catch (error) {
     console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reset user account transactions and budget
+app.post('/api/settings/reset', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const settings = await db.resetUserData(userId);
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error resetting user data:', error);
+    res.status(500).json({ error: 'Reset failed' });
+  }
+});
+
+// --- Admin Panel Endpoints ---
+
+// Get all users (Admin only)
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const adminId = getUserId(req);
+    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
+      return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    }
+    const allUsers = await db.getAllUserSettings();
+    res.json(allUsers);
+  } catch (error) {
+    console.error('Error fetching users for admin:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Block/unblock a user (Admin only)
+app.post('/api/admin/block', async (req, res) => {
+  try {
+    const adminId = getUserId(req);
+    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
+      return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    }
+    const { targetUserId, isBlocked } = req.body;
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'Target user ID is required' });
+    }
+    const updated = await db.blockUser(targetUserId, !!isBlocked);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error blocking user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Broadcast push alert message to all users (Admin only)
+app.post('/api/admin/broadcast', async (req, res) => {
+  try {
+    const adminId = getUserId(req);
+    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
+      return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    }
+    const { message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message body cannot be empty' });
+    }
+    const result = await broadcastMessage(message);
+    res.json(result);
+  } catch (error) {
+    console.error('Error in broadcast execution:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

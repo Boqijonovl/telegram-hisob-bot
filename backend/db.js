@@ -78,7 +78,7 @@ export const db = {
   },
 
   // Get budget & settings
-  async getSettings(userId) {
+  async getSettings(userId, firstName = '', username = '') {
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
@@ -95,7 +95,10 @@ export const db = {
       const defaultSettings = {
         user_id: String(userId),
         currency: 'UZS',
-        budget: 0
+        budget: 0,
+        first_name: firstName || '',
+        username: username || '',
+        is_blocked: false
       };
 
       const { data: inserted, error: insertError } = await supabase
@@ -111,6 +114,20 @@ export const db = {
       return inserted;
     }
 
+    // Update names if changed
+    if ((firstName && data.first_name !== firstName) || (username && data.username !== username)) {
+      const { data: updated } = await supabase
+        .from('user_settings')
+        .update({
+          first_name: firstName || data.first_name,
+          username: username || data.username
+        })
+        .eq('user_id', String(userId))
+        .select()
+        .maybeSingle();
+      if (updated) return updated;
+    }
+
     return data;
   },
 
@@ -124,7 +141,8 @@ export const db = {
 
     const { data, error } = await supabase
       .from('user_settings')
-      .upsert(updateData)
+      .update(updateData)
+      .eq('user_id', String(userId))
       .select()
       .single();
 
@@ -167,5 +185,64 @@ export const db = {
       budget: settings.budget || 0,
       categories
     };
+  },
+
+  // Get all user settings for admin panel
+  async getAllUserSettings() {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .order('user_id');
+
+    if (error) {
+      console.error('Supabase error fetching all users:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+  // Block/unblock a user
+  async blockUser(userId, isBlocked) {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update({ is_blocked: isBlocked })
+      .eq('user_id', String(userId))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error blocking user:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  // Reset user data (delete all transactions and reset settings budget)
+  async resetUserData(userId) {
+    // 1. Delete all transactions
+    const { error: txError } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', String(userId));
+
+    if (txError) {
+      console.error('Supabase error resetting transactions:', txError);
+      throw txError;
+    }
+
+    // 2. Reset budget
+    const { data: settings, error: setStrError } = await supabase
+      .from('user_settings')
+      .update({ budget: 0 })
+      .eq('user_id', String(userId))
+      .select()
+      .single();
+
+    if (setStrError) {
+      console.error('Supabase error resetting budget settings:', setStrError);
+      throw setStrError;
+    }
+
+    return settings;
   }
 };

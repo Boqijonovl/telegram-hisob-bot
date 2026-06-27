@@ -202,6 +202,21 @@ export function initBot() {
 
   bot = new Telegraf(token);
 
+  // Blocked check middleware
+  bot.use(async (ctx, next) => {
+    const userId = String(ctx.from?.id);
+    if (!userId) return next();
+    try {
+      const settings = await db.getSettings(userId);
+      if (settings && settings.is_blocked) {
+        return ctx.reply("⚠️ Kechirasiz, siz botdan foydalanishdan bloklangansiz. Muammo yuzasidan adminga murojaat qiling.");
+      }
+    } catch (e) {
+      console.error('Error in bot block check:', e);
+    }
+    return next();
+  });
+
   // Start command
   bot.start((ctx) => {
     const firstName = ctx.from.first_name || 'Foydalanuvchi';
@@ -579,5 +594,32 @@ Tejamkor bo'lishni tavsiya qilamiz! 📉`;
     await bot.telegram.sendMessage(userId, escapeMarkdown(message), { parse_mode: 'MarkdownV2' });
   } catch (error) {
     console.error('Error sending budget alert via webhook:', error);
+  }
+}
+
+// Programmatic message broadcaster to all bot users
+export async function broadcastMessage(message) {
+  if (!bot) return { success: false, error: 'Bot is not running' };
+  
+  try {
+    const users = await db.getAllUserSettings();
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const user of users) {
+      if (user.user_id === '123456') continue; // Skip dev fallback ID
+      
+      try {
+        await bot.telegram.sendMessage(user.user_id, message);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to send broadcast to ${user.user_id}:`, err.message);
+        failCount++;
+      }
+    }
+    return { success: true, successCount, failCount };
+  } catch (error) {
+    console.error('Error in broadcastMessage:', error);
+    throw error;
   }
 }
