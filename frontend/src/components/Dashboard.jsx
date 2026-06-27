@@ -175,6 +175,7 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
 
 function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_URL, tgUser, showToast }) {
   const [activeTab, setActiveTab] = useState('kategoriya'); // 'kategoriya' or 'tranzaksiya'
+  const [activeCategory, setActiveCategory] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const pdfRef = useRef(null);
 
@@ -318,36 +319,64 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
       {/* Content based on Tab */}
       {activeTab === 'kategoriya' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {stats.categories && stats.categories.length > 0 ? stats.categories.map(cat => {
-            const conf = getCategoryConfig(cat.name);
-            const Icon = conf.icon;
-            return (
-              <div key={cat.name} style={{
-                background: 'var(--secondary-bg-color)',
-                borderRadius: '16px',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                border: '1px solid var(--card-border)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: conf.bg, color: conf.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={20} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-color)' }}>{t.categories[cat.name] || cat.name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{cat.count} ta operatsiya</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  {cat.income > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--income-color)' }}>+{formatAmount(cat.income)}</div>}
-                  {cat.expense > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--expense-color)' }}>-{formatAmount(cat.expense)}</div>}
-                </div>
+          {activeCategory ? (
+            <div>
+              <button 
+                onClick={() => setActiveCategory(null)}
+                style={{ background: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', padding: '8px 16px', borderRadius: '8px', marginBottom: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600' }}
+              >
+                &larr; Orqaga
+              </button>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>
+                {t.categories[activeCategory] || activeCategory}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {transactions.filter(tx => tx.category === activeCategory).map(tx => (
+                  <TransactionItem 
+                    key={tx.id} 
+                    tx={tx} 
+                    formatAmount={formatAmount} 
+                    onDelete={onDelete}
+                    t={t}
+                  />
+                ))}
               </div>
-            );
-          }) : (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--hint-color)' }}>Kategoriyalar yo'q</div>
+            </div>
+          ) : (
+            stats.categories && stats.categories.length > 0 ? stats.categories.map(cat => {
+              const conf = getCategoryConfig(cat.name);
+              const Icon = conf.icon;
+              return (
+                <div key={cat.name} 
+                  onClick={() => setActiveCategory(cat.name)}
+                  style={{
+                  background: 'var(--secondary-bg-color)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid var(--card-border)',
+                  cursor: 'pointer'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: conf.bg, color: conf.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-color)' }}>{t.categories[cat.name] || cat.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{cat.count} ta operatsiya</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {cat.income > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--income-color)' }}>+{formatAmount(cat.income)}</div>}
+                    {cat.expense > 0 && <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--expense-color)' }}>-{formatAmount(cat.expense)}</div>}
+                  </div>
+                </div>
+              );
+            }) : (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--hint-color)' }}>Kategoriyalar yo'q</div>
+            )
           )}
         </div>
       )}

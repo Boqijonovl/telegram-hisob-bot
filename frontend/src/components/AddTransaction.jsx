@@ -84,11 +84,11 @@ function AddTransaction({ onClose, onSubmit, t }) {
   const categoriesList = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{t.addTransactionTitle}</h3>
-          <button onClick={onClose} className="close-btn">
+    <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
+      <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '20px', border: '1px solid var(--card-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>{t.addTransactionTitle}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-color)', cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>

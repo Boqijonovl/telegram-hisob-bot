@@ -31,6 +31,27 @@
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+[data-theme='light'] {
+  --bg-color: #f8fafc;
+  --text-color: #0f172a;
+  --hint-color: #64748b;
+  --link-color: #4f46e5;
+  
+  --button-color: #4f46e5;
+  --button-text-color: #ffffff;
+  
+  --secondary-bg-color: #ffffff;
+  
+  --income-color: #059669;
+  --income-bg: rgba(5, 150, 105, 0.12);
+  --expense-color: #e11d48;
+  --expense-bg: rgba(225, 29, 72, 0.12);
+  
+  --card-bg: rgba(255, 255, 255, 1);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --glow-color: rgba(79, 70, 229, 0.1);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

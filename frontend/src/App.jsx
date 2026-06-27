@@ -21,6 +21,7 @@ import Analytics from './components/Analytics';
 import AddTransaction from './components/AddTransaction';
 import Profile from './components/Profile';
 import VaultModal from './components/VaultModal';
+import AdminPanel from './components/AdminPanel';
 import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
@@ -35,8 +36,7 @@ const getApiUrl = () => {
 const API_URL = getApiUrl();
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile'
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile', 'add-transaction', 'history', 'admin'
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [settings, setSettings] = useState({ budget: 0, isAdmin: false, is_blocked: false });
@@ -44,6 +44,17 @@ function App() {
   const [tgUser, setTgUser] = useState(null);
   const [toast, setToast] = useState(null);
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [theme, setTheme] = useState(localStorage.getItem('appTheme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('appTheme', newTheme);
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+  };
   
   // Multilingual State
   const [lang, setLang] = useState(localStorage.getItem('appLang') || 'uz');
@@ -600,23 +611,36 @@ function App() {
               vaultBalance={monthlyStats.vaultBalance}
               onOpenVault={() => setShowVaultModal(true)}
               isAdmin={settings.isAdmin}
+              formatAmount={formatAmount}
+              onReset={handleResetData}
+              setActiveTab={setActiveTab}
+              theme={theme}
+              toggleTheme={toggleTheme}
+            />
+          )}
+
+          {activeTab === 'admin' && settings.isAdmin && (
+            <AdminPanel 
               adminUsers={adminUsers}
               adminBroadcastMsg={adminBroadcastMsg}
               setAdminBroadcastMsg={setAdminBroadcastMsg}
               handleSendBroadcast={handleSendBroadcast}
               handleToggleBlock={handleToggleBlock}
-              formatAmount={formatAmount}
-              onReset={handleResetData}
+              tgUser={tgUser}
+              t={t}
             />
           )}
         </>
       )}
 
-      {/* Floating Add Transaction Modal */}
-      {showAddModal && (
+      {/* Add Transaction Tab */}
+      {activeTab === 'add-transaction' && (
         <AddTransaction 
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleAddTransaction}
+          onClose={() => setActiveTab('dashboard')}
+          onSubmit={(tx) => {
+             handleAddTransaction(tx);
+             setActiveTab('dashboard');
+          }}
           t={t}
         />
       )}
@@ -654,8 +678,8 @@ function App() {
         </button>
 
         <button 
-          className="nav-item-plus"
-          onClick={() => setShowAddModal(true)}
+          className={`nav-item-plus ${activeTab === 'add-transaction' ? 'active' : ''}`}
+          onClick={() => setActiveTab('add-transaction')}
           aria-label="Yangi tranzaksiya"
         >
           <Plus size={26} />
