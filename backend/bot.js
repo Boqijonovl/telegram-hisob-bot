@@ -318,26 +318,36 @@ Hisob-kitob botiga xush kelibsiz!
       }
 
       // Download file stream
-      const fileLink = await ctx.telegram.getFileLink(fileId);
-      const audioRes = await fetch(fileLink.href);
-      const audioBuffer = await audioRes.arrayBuffer();
+      let audioBuffer;
+      try {
+        const fileLink = await ctx.telegram.getFileLink(fileId);
+        const audioRes = await fetch(fileLink.href);
+        audioBuffer = await audioRes.arrayBuffer();
+      } catch (err) {
+        throw new Error(`Telegram API dan fayl yuklashda xatolik: ${err.cause ? err.cause.message : err.message}`);
+      }
 
       // Submit to Hugging Face Whisper Large v3 (with retry logic for 503 service loading)
       let transcribedText = "";
       let retries = 4;
       
       while (retries > 0) {
-        const hfRes = await fetch(
-          "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
-          {
-            headers: {
-              Authorization: `Bearer ${hfToken}`,
-              "Content-Type": "audio/ogg"
-            },
-            method: "POST",
-            body: Buffer.from(audioBuffer)
-          }
-        );
+        let hfRes;
+        try {
+          hfRes = await fetch(
+            "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+            {
+              headers: {
+                Authorization: `Bearer ${hfToken}`,
+                "Content-Type": "audio/ogg"
+              },
+              method: "POST",
+              body: Buffer.from(audioBuffer)
+            }
+          );
+        } catch (err) {
+          throw new Error(`HuggingFace serveriga ulanishda xatolik: ${err.cause ? err.cause.message : err.message}`);
+        }
 
         if (hfRes.ok) {
           const hfData = await hfRes.json();
