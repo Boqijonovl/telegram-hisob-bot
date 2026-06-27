@@ -41,9 +41,11 @@ body {
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  padding-bottom: 90px; /* Space for the bottom navbar */
+  padding-bottom: calc(95px + env(safe-area-inset-bottom, 0px)); /* Safe padding for bottom nav */
   min-height: 100vh;
+  min-height: 100dvh; /* Adapt dynamically to Telegram viewport */
   transition: background-color var(--transition-normal), color var(--transition-normal);
+  overflow-x: hidden;
 }
 
 /* App container */
@@ -137,13 +139,18 @@ body {
 }
 
 .balance-amount {
-  font-size: 32px;
+  font-size: clamp(24px, 7vw, 32px); /* Scale down automatically for smaller screens */
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 20px;
   display: flex;
   align-items: baseline;
   gap: 6px;
+  overflow-x: auto; /* Prevent long balances from breaking cards */
+  scrollbar-width: none;
+}
+.balance-amount::-webkit-scrollbar {
+  display: none;
 }
 
 .balance-amount span {
@@ -323,7 +330,7 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--card-border);
-  padding: 10px 16px 24px 16px; /* Added extra padding for iOS home indicator bar compatibility */
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 12px)) 16px; /* Responsive mobile home indicator notch space */
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -404,8 +411,9 @@ body {
   border-top: 1px solid var(--card-border);
   width: 100%;
   max-width: 480px;
-  padding: 24px;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 12px)) 24px; /* safe bottom padding inside modals */
   max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
   animation: slideUp var(--transition-normal);
 }

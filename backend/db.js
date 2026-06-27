@@ -1,63 +1,38 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = path.join(__dirname, 'database.json');
+dotenv.config();
 
-// Initialize database file if it doesn't exist
-async function initDb() {
-  try {
-    await fs.access(DB_FILE);
-  } catch (error) {
-    const initialData = { users: {} };
-    await fs.writeFile(DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
-  }
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ WARNING: SUPABASE_URL or SUPABASE_KEY is missing! Database transactions will fail.');
 }
 
-// Read database content
-async function readDb() {
-  await initDb();
-  const content = await fs.readFile(DB_FILE, 'utf-8');
-  return JSON.parse(content);
-}
-
-// Write database content
-async function writeDb(data) {
-  await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// Helper to get or create user data structure
-function getOrCreateUser(data, userId) {
-  const strId = String(userId);
-  if (!data.users[strId]) {
-    data.users[strId] = {
-      settings: {
-        currency: 'UZS',
-        budget: 0
-      },
-      transactions: []
-    };
-  }
-  return data.users[strId];
-}
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 export const db = {
   // Get all transactions for a user
   async getTransactions(userId) {
-    const data = await readDb();
-    const user = getOrCreateUser(data, userId);
-    // Sort transactions by date descending
-    return user.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', String(userId))
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error fetching transactions:', error);
+      throw error;
+    }
+    return data || [];
   },
 
   // Add a new transaction
   async addTransaction(userId, { amount, type, category, description, date }) {
-    const data = await readDb();
-    const user = getOrCreateUser(data, userId);
-
     const newTransaction = {
       id: 'tx_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
+      user_id: String(userId),
       amount: parseFloat(amount),
       type: type || 'expense', // 'expense' or 'income'
       category: category || 'Boshqa',
@@ -65,41 +40,90 @@ export const db = {
       date: date || new Date().toISOString()
     };
 
-    user.transactions.push(newTransaction);
-    await writeDb(data);
-    return newTransaction;
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([newTransaction])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error inserting transaction:', error);
+      throw error;
+    }
+    return data;
   },
 
   // Delete a transaction
   async deleteTransaction(userId, transactionId) {
-    const data = await readDb();
-    const user = getOrCreateUser(data, userId);
-    
-    const initialLength = user.transactions.length;
-    user.transactions = user.transactions.filter(tx => tx.id !== transactionId);
-    
-    if (user.transactions.length === initialLength) {
-      return false; // not found
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', String(userId))
+      .eq('id', transactionId);
+
+    if (error) {
+      console.error('Supabase error deleting transaction:', error);
+      throw error;
     }
-    
-    await writeDb(data);
     return true;
   },
 
   // Get budget & settings
   async getSettings(userId) {
-    const data = await readDb();
-    const user = getOrCreateUser(data, userId);
-    return user.settings;
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', String(userId))
+      .maybeSingle();
+
+    if (error) {
+      console.error('Supabase error fetching settings:', error);
+      throw error;
+    }
+
+    if (!data) {
+      // Create and return default settings if not exists
+      const defaultSettings = {
+        user_id: String(userId),
+        currency: 'UZS',
+        budget: 0
+      };
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('user_settings')
+        .insert([defaultSettings])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Supabase error inserting default settings:', insertError);
+        throw insertError;
+      }
+      return inserted;
+    }
+
+    return data;
   },
 
   // Update budget & settings
   async updateSettings(userId, settings) {
-    const data = await readDb();
-    const user = getOrCreateUser(data, userId);
-    user.settings = { ...user.settings, ...settings };
-    await writeDb(data);
-    return user.settings;
+    const updateData = {
+      user_id: String(userId),
+      currency: settings.currency || 'UZS',
+      budget: settings.budget !== undefined ? parseFloat(settings.budget) : 0
+    };
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .upsert(updateData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error updating settings:', error);
+      throw error;
+    }
+    return data;
   },
 
   // Get statistics
@@ -112,7 +136,7 @@ export const db = {
     const categoryTotals = {};
 
     transactions.forEach(tx => {
-      const amount = tx.amount;
+      const amount = parseFloat(tx.amount);
       if (tx.type === 'income') {
         totalIncome += amount;
       } else {
@@ -121,7 +145,6 @@ export const db = {
       }
     });
 
-    // Format category totals into an array for easy charting
     const categories = Object.keys(categoryTotals).map(name => ({
       name,
       amount: categoryTotals[name],

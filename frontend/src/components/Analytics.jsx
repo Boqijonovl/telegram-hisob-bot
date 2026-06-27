@@ -30,7 +30,77 @@ function Analytics({ stats, currency, formatAmount }) {
         )}
       </div>
 
-      {/* Category Breakdown */}
+      {/* SVG Donut Chart (Premium Visual) */}
+      {hasExpenses && (
+        <div className="analytics-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px', marginBottom: '24px' }}>
+          <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+            <svg width="100%" height="100%" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                fill="transparent"
+                stroke="rgba(255, 255, 255, 0.03)"
+                strokeWidth="8"
+              />
+              {/* Slices representing categories */}
+              {(() => {
+                let accumulatedPercent = 0;
+                const r = 38;
+                const c = 2 * Math.PI * r; // ~238.76
+
+                return stats.categories.map((cat) => {
+                  const config = getCategoryConfig(cat.name);
+                  const strokeDasharray = `${(cat.percentage / 100) * c} ${c}`;
+                  const strokeDashoffset = c - (accumulatedPercent / 100) * c;
+                  accumulatedPercent += cat.percentage;
+
+                  return (
+                    <circle
+                      key={cat.name}
+                      cx="50"
+                      cy="50"
+                      r={r}
+                      fill="transparent"
+                      stroke={config.color}
+                      strokeWidth="8"
+                      strokeDasharray={strokeDasharray}
+                      strokeDashoffset={strokeDashoffset}
+                      transform="rotate(-90 50 50)"
+                      strokeLinecap={cat.percentage > 2 ? 'round' : 'butt'}
+                      style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                    />
+                  );
+                });
+              })()}
+            </svg>
+            
+            {/* Donut inner text */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+              width: '100px'
+            }}>
+              <p style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--hint-color)', letterSpacing: '0.5px', marginBottom: '2px' }}>
+                Jami Harajat
+              </p>
+              <h4 style={{ fontSize: '15px', fontWeight: '800', wordBreak: 'break-all', lineHeight: 1.2 }}>
+                {formatAmount(stats.totalExpense)}
+              </h4>
+              <p style={{ fontSize: '8px', fontWeight: '600', color: 'var(--hint-color)', marginTop: '2px' }}>
+                {currency}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Breakdown list */}
       <div className="section-title-bar">
         <h3>Kategoriyalar bo'yicha</h3>
       </div>
