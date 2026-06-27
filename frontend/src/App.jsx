@@ -24,6 +24,56 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [tgUser, setTgUser] = useState(null);
   const [toast, setToast] = useState(null);
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+
+  const handlePrevMonth = () => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Filter transactions based on the selected month/year
+  const monthlyTransactions = transactions.filter(tx => {
+    const d = new Date(tx.date);
+    return d.getFullYear() === currentMonthDate.getFullYear() && d.getMonth() === currentMonthDate.getMonth();
+  });
+
+  // Calculate monthly stats client-side
+  const getMonthlyStats = () => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    const categoryTotals = {};
+
+    monthlyTransactions.forEach(tx => {
+      const amount = parseFloat(tx.amount);
+      if (tx.type === 'income') {
+        totalIncome += amount;
+      } else {
+        totalExpense += amount;
+        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + amount;
+      }
+    });
+
+    const categories = Object.keys(categoryTotals).map(name => ({
+      name,
+      amount: categoryTotals[name],
+      percentage: totalExpense > 0 ? Math.round((categoryTotals[name] / totalExpense) * 100) : 0
+    })).sort((a, b) => b.amount - a.amount);
+
+    return {
+      balance: totalIncome - totalExpense,
+      totalIncome,
+      totalExpense,
+      budget: settings.budget || 0,
+      categories
+    };
+  };
+
+  const monthlyStats = getMonthlyStats();
 
   // Show status toasts
   const showToast = (message, type = 'success') => {
@@ -311,10 +361,21 @@ function App() {
         </div>
       ) : (
         <>
+          {/* Month Navigation Selector Bar */}
+          {activeTab !== 'settings' && (
+            <div className="month-navigation-bar">
+              <button type="button" className="month-nav-btn" onClick={handlePrevMonth}>&larr;</button>
+              <span className="month-nav-label">
+                {currentMonthDate.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })}
+              </span>
+              <button type="button" className="month-nav-btn" onClick={handleNextMonth}>&rarr;</button>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <Dashboard 
-              transactions={transactions} 
-              stats={stats} 
+              transactions={monthlyTransactions} 
+              stats={monthlyStats} 
               currency={settings.currency}
               formatAmount={formatAmount}
               onDelete={handleDeleteTransaction}
@@ -324,7 +385,7 @@ function App() {
 
           {activeTab === 'analytics' && (
             <Analytics 
-              stats={stats} 
+              stats={monthlyStats} 
               currency={settings.currency}
               formatAmount={formatAmount}
             />

@@ -34,15 +34,6 @@ export const getCategoryConfig = (categoryName) => {
   return configs[categoryName] || configs['Boshqa'];
 };
 
-const QUICK_TEMPLATES = [
-  { label: '🍞 Non', amount: 4000, type: 'expense', category: 'Oziq-ovqat', desc: 'Non xaridi' },
-  { label: '🚕 Taksi', amount: 15000, type: 'expense', category: 'Transport', desc: 'Taksi yo\'lkira' },
-  { label: '☕ Kofe', amount: 18000, type: 'expense', category: 'Oziq-ovqat', desc: 'Kofe' },
-  { label: '🍛 Tushlik', amount: 45000, type: 'expense', category: 'Oziq-ovqat', desc: 'Tushlik ovqat' },
-  { label: '💼 Oylik', amount: 5000000, type: 'income', category: 'Daromad', desc: 'Oylik maosh' },
-  { label: '🎬 Kino', amount: 35000, type: 'expense', category: 'Ko\'ngilochar', desc: 'Kino chipta' }
-];
-
 // Odometer animated counter for financial figures
 function AnimatedCounter({ value, duration = 800 }) {
   const [count, setCount] = useState(0);
@@ -77,6 +68,50 @@ function AnimatedCounter({ value, duration = 800 }) {
 
   return new Intl.NumberFormat('uz-UZ').format(count);
 }
+
+// Format day header
+const formatDayHeader = (dateStr) => {
+  const date = new Date(dateStr);
+  const todayStr = new Date().toISOString().substring(0, 10);
+  
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().substring(0, 10);
+
+  if (dateStr === todayStr) {
+    return "Bugun, " + date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
+  } else if (dateStr === yesterdayStr) {
+    return "Kecha, " + date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' });
+  } else {
+    return date.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+};
+
+// Group transactions by calendar day YYYY-MM-DD
+const groupTransactionsByDay = (txList) => {
+  const groups = {};
+  txList.forEach(tx => {
+    const date = new Date(tx.date);
+    const dateKey = date.toISOString().substring(0, 10);
+    if (!groups[dateKey]) {
+      groups[dateKey] = {
+        dateStr: dateKey,
+        transactions: [],
+        dayIncome: 0,
+        dayExpense: 0
+      };
+    }
+    groups[dateKey].transactions.push(tx);
+    const amount = parseFloat(tx.amount);
+    if (tx.type === 'income') {
+      groups[dateKey].dayIncome += amount;
+    } else {
+      groups[dateKey].dayExpense += amount;
+    }
+  });
+
+  return Object.values(groups).sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+};
 
 // Swipe-to-delete item wrapper
 function TransactionItem({ tx, currency, formatAmount, onDelete }) {
@@ -122,14 +157,9 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
   const config = getCategoryConfig(tx.category);
   const IconComponent = config.icon;
   
-  const formatDate = (isoString) => {
+  const formatTime = (isoString) => {
     const date = new Date(isoString);
-    return date.toLocaleDateString('uz-UZ', { 
-      day: 'numeric', 
-      month: 'long', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return date.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -157,7 +187,7 @@ function TransactionItem({ tx, currency, formatAmount, onDelete }) {
           </div>
           <div className="tx-details">
             <h4>{tx.description || tx.category}</h4>
-            <p>{formatDate(tx.date)}</p>
+            <p>{formatTime(tx.date)}</p>
           </div>
         </div>
         <div className="tx-right">
@@ -192,6 +222,8 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
 
     return matchesSearch && matchesCategory;
   });
+
+  const groupedDays = groupTransactionsByDay(filteredTransactions);
 
   // 3D Parallax Card Tilt handlers
   const handleMouseMove = (e) => {
@@ -235,19 +267,6 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
     });
   };
 
-  const handleQuickTemplateClick = (tmpl) => {
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
-    if (onAdd) {
-      onAdd({
-        amount: tmpl.amount,
-        type: tmpl.type,
-        category: tmpl.category,
-        description: tmpl.desc,
-        date: new Date().toISOString()
-      });
-    }
-  };
-
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* 3D Parallax Balance Card (Focused on balance only) */}
@@ -286,29 +305,6 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
           <h3 className="stat-card-val">
             -<AnimatedCounter value={stats.totalExpense} /> <span className="stat-card-curr">{currency}</span>
           </h3>
-        </div>
-      </div>
-
-      {/* Quick Templates Panel */}
-      <div className="quick-templates-section">
-        <div className="section-title-bar" style={{ marginTop: 0, marginBottom: '8px' }}>
-          <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--hint-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            ⚡ Tezkor shablonlar
-          </h4>
-        </div>
-        <div className="quick-templates-list">
-          {QUICK_TEMPLATES.map((tmpl, idx) => (
-            <button 
-              key={idx} 
-              onClick={() => handleQuickTemplateClick(tmpl)}
-              className="quick-template-pill"
-            >
-              <span className="tmpl-label">{tmpl.label}</span>
-              <span className="tmpl-amount">
-                {tmpl.type === 'income' ? '+' : ''}{formatAmount(tmpl.amount)}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
 
@@ -392,14 +388,29 @@ function Dashboard({ transactions, stats, currency, formatAmount, onDelete, onAd
         </div>
       ) : (
         <div className="transaction-list">
-          {filteredTransactions.map((tx) => (
-            <TransactionItem 
-              key={tx.id} 
-              tx={tx} 
-              currency={currency} 
-              formatAmount={formatAmount} 
-              onDelete={onDelete} 
-            />
+          {groupedDays.map((group) => (
+            <div key={group.dateStr} className="daily-group-wrapper" style={{ marginBottom: '20px' }}>
+              {/* Daily Group Header with aggregated sums */}
+              <div className="daily-group-header">
+                <span className="daily-date">{formatDayHeader(group.dateStr)}</span>
+                <span className="daily-totals">
+                  {group.dayIncome > 0 && <span className="daily-income">+{formatAmount(group.dayIncome)} </span>}
+                  {group.dayExpense > 0 && <span className="daily-expense">-{formatAmount(group.dayExpense)} {currency}</span>}
+                </span>
+              </div>
+              
+              <div className="daily-group-items">
+                {group.transactions.map((tx) => (
+                  <TransactionItem 
+                    key={tx.id} 
+                    tx={tx} 
+                    currency={currency} 
+                    formatAmount={formatAmount} 
+                    onDelete={onDelete} 
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
