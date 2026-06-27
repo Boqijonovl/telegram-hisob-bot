@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,7 +11,15 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ WARNING: SUPABASE_URL or SUPABASE_KEY is missing! Database transactions will fail.');
 }
 
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+// Configured with ws transport for compatibility with Node.js < 22
+const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
+  auth: {
+    persistSession: false
+  },
+  realtime: {
+    transport: ws
+  }
+});
 
 export const db = {
   // Get all transactions for a user
