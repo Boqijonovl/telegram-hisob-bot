@@ -8,11 +8,18 @@ function AdminPanel({
   handleSendBroadcast, 
   handleToggleBlock, 
   tgUser, 
-  t 
+  t,
+  setActiveTab
 }) {
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+        <button 
+          onClick={() => setActiveTab('profile')}
+          style={{ background: 'none', border: 'none', color: 'var(--text-color)', padding: '0', marginBottom: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600' }}
+        >
+          &larr; Orqaga
+        </button>
         <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: 'var(--expense-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <ShieldAlert size={20} /> {t.adminPanel}
         </h3>

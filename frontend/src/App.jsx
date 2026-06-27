@@ -22,6 +22,7 @@ import AddTransaction from './components/AddTransaction';
 import Profile from './components/Profile';
 import VaultModal from './components/VaultModal';
 import AdminPanel from './components/AdminPanel';
+import History from './components/History';
 import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
@@ -628,6 +629,18 @@ function App() {
               handleToggleBlock={handleToggleBlock}
               tgUser={tgUser}
               t={t}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <History 
+              transactions={monthlyTransactions}
+              formatAmount={formatAmount}
+              onDelete={handleDeleteTransaction}
+              t={t}
+              lang={lang}
+              setActiveTab={setActiveTab}
             />
           )}
         </>

@@ -107,46 +107,14 @@ const groupTransactionsByDay = (txList) => {
 };
 
 function TransactionItem({ tx, formatAmount, onDelete, t }) {
-  const [startX, setStartX] = useState(0);
-  const [offsetX, setOffsetX] = useState(0);
-  const [isSwiped, setIsSwiped] = useState(false);
   const conf = getCategoryConfig(tx.category);
   const Icon = conf.icon;
 
-  const handleTouchStart = (e) => setStartX(e.touches[0].clientX);
-  const handleTouchMove = (e) => {
-    const currentX = e.touches[0].clientX;
-    let diff = currentX - startX;
-    if (isSwiped) diff -= 80;
-    setOffsetX(Math.max(diff, -100));
-  };
-  const handleTouchEnd = () => {
-    if (offsetX < -40) {
-      setOffsetX(-80);
-      setIsSwiped(true);
-      window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-    } else {
-      setOffsetX(0);
-      setIsSwiped(false);
-    }
-  };
-
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}>
-      <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0, width: '80px',
-        backgroundColor: 'var(--expense-color)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <button onClick={() => onDelete(tx.id)} style={{ background: 'none', border: 'none', color: 'white', padding: '20px' }}>
-          <Trash2 size={20} />
-        </button>
-      </div>
       <div 
         className="transaction-item"
-        style={{ transform: `translateX(${offsetX}px)`, transition: offsetX === 0 || offsetX === -80 ? 'transform 0.2s ease-out' : 'none' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '12px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
           <div className="tx-icon" style={{ backgroundColor: conf.bg, color: conf.color }}>
@@ -159,7 +127,7 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
             <p style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{tx.description || t.categories[tx.category]}</p>
           </div>
         </div>
-        <div className="tx-amount" style={{ textAlign: 'right' }}>
+        <div className="tx-amount" style={{ textAlign: 'right', marginRight: '8px' }}>
           <p style={{ 
             fontSize: '14px', 
             fontWeight: '700', 
@@ -168,6 +136,16 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
             {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)}
           </p>
         </div>
+        <button 
+          onClick={() => onDelete(tx.id)} 
+          style={{ 
+            background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--expense-color)', 
+            padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
     </div>
   );

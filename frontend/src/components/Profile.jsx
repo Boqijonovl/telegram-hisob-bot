@@ -47,7 +47,7 @@ function Profile({
         </div>
 
         {/* History */}
-        <div onClick={() => setActiveTab('dashboard')} style={{
+        <div onClick={() => setActiveTab('history')} style={{
           background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
         }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
