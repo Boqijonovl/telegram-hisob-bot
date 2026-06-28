@@ -727,6 +727,8 @@ function App() {
                  setActiveTab('dashboard');
               }}
               categories={categories}
+              tgUser={tgUser}
+              apiUrl={API_URL}
               t={t}
             />
           )}

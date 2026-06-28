@@ -91,6 +91,20 @@ body {
   to { transform: translateY(0); }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-45deg); }
+  50%, 100% { transform: translateX(200%) skewX(-45deg); }
+}
+
+/* Base button animations */
+button, .category-item, .nav-item, .nav-item-plus, .stat-item, [onClick] {
+  transition: transform var(--transition-fast), background var(--transition-normal), opacity var(--transition-fast);
+}
+
+button:active:not(:disabled), .nav-item:active, .nav-item-plus:active, .category-item:active {
+  transform: scale(0.96) !important;
+}
+
 /* Header styling */
 .app-header {
   display: flex;
@@ -151,6 +165,19 @@ body {
   border-radius: 50%;
   background: var(--glow-color);
   filter: blur(40px);
+  pointer-events: none;
+}
+
+.balance-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: translateX(-150%) skewX(-45deg);
+  animation: shimmer 4s infinite;
   pointer-events: none;
 }
 
