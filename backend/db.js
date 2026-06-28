@@ -436,5 +436,80 @@ export const db = {
       .match({ user_id: resolvedId, id });
     if (error) throw error;
     return true;
+  },
+
+  // --- Debts Methods ---
+  async getDebts(userId) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('debts')
+      .select('*')
+      .eq('user_id', resolvedId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') return [];
+      console.error('Supabase error fetching debts:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+  async addDebt(userId, { type, person_name, amount, due_date }) {
+    const resolvedId = await this.resolveUserId(userId);
+    const newDebt = {
+      id: 'debt_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
+      user_id: resolvedId,
+      type: type,
+      person_name: person_name,
+      amount: parseFloat(amount),
+      due_date: due_date || null,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([newDebt])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error adding debt:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  async updateDebt(userId, debtId, updates) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('debts')
+      .update(updates)
+      .eq('user_id', resolvedId)
+      .eq('id', debtId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error updating debt:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  async deleteDebt(userId, debtId) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { error } = await supabase
+      .from('debts')
+      .delete()
+      .eq('user_id', resolvedId)
+      .eq('id', debtId);
+
+    if (error) {
+      console.error('Supabase error deleting debt:', error);
+      throw error;
+    }
+    return true;
   }
 };
