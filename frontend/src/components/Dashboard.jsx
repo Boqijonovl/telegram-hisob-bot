@@ -369,8 +369,12 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
           ) : (
             groupedDays.map(group => (
               <div key={group.dateStr} className="daily-group-box" style={{ marginBottom: '16px' }}>
-                <div className="daily-group-header" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <div className="daily-group-header" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className="daily-date" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--hint-color)' }}>{formatDayHeader(group.dateStr, t, lang)}</span>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '11px', fontWeight: '700' }}>
+                    {group.dayIncome > 0 && <span style={{ color: 'var(--income-color)' }}>+{formatAmount(group.dayIncome)}</span>}
+                    {group.dayExpense > 0 && <span style={{ color: 'var(--expense-color)' }}>-{formatAmount(group.dayExpense)}</span>}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {group.transactions.map(tx => (
