@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Edit2, Check, X, Layers } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getCategoryConfig } from './Dashboard';
 
 function CategoryManager({ categories, setCategories, setActiveTab, tgUser, apiUrl, t }) {
+  const queryClient = useQueryClient();
   const [activeType, setActiveType] = useState('expense'); // 'expense' or 'income'
   const [newCatName, setNewCatName] = useState('');
   const [editingCat, setEditingCat] = useState(null);
@@ -27,6 +29,7 @@ function CategoryManager({ categories, setCategories, setActiveTab, tgUser, apiU
         [activeType]: newList
       });
       setNewCatName('');
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
     } catch (e) { console.error(e); }
   };
 
@@ -42,6 +45,7 @@ function CategoryManager({ categories, setCategories, setActiveTab, tgUser, apiU
         ...categories,
         [activeType]: newList
       });
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
     } catch (e) { console.error(e); }
   };
 
@@ -70,6 +74,7 @@ function CategoryManager({ categories, setCategories, setActiveTab, tgUser, apiU
         [activeType]: newList
       });
       setEditingCat(null);
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
     } catch (e) { console.error(e); }
   };
 

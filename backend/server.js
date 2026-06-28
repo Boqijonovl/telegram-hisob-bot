@@ -183,7 +183,7 @@ app.post('/api/categories', async (req, res) => {
     const userId = getUserId(req);
     const { type, name } = req.body;
     if (!type || !name) return res.status(400).json({ error: 'Type and name are required' });
-    const category = await db.addCategory(userId, type, name);
+    const category = await db.addCategory(userId, { type, name });
     res.status(201).json(category);
   } catch (error) {
     console.error('Error adding category:', error);
@@ -359,6 +359,65 @@ app.post('/api/send-pdf', async (req, res) => {
   } catch (error) {
     console.error('Error sending PDF via bot:', error);
     res.status(500).json({ error: 'Failed to send PDF' });
+  }
+});
+
+// --- Debts Endpoints ---
+app.get('/api/debts', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const debts = await db.getDebts(userId);
+    res.json(debts);
+  } catch (error) {
+    console.error('Error fetching debts:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/debts', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { type, person_name, amount, due_date } = req.body;
+    if (!type || !person_name || !amount) return res.status(400).json({ error: 'Missing required fields' });
+    const debt = await db.addDebt(userId, { type, person_name, amount, due_date });
+    res.status(201).json(debt);
+  } catch (error) {
+    console.error('Error adding debt:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/debts/:id', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const updated = await db.updateDebt(userId, req.params.id, req.body);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating debt:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/debts/:id', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    await db.deleteDebt(userId, req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting debt:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/settings/link', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { linked_to } = req.body;
+    const updatedSettings = await db.updateSettings(userId, { linked_to: linked_to || null });
+    res.json(updatedSettings);
+  } catch (error) {
+    console.error('Error linking accounts:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

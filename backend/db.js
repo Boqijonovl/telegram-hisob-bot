@@ -22,12 +22,24 @@ const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
 });
 
 export const db = {
+  // Resolve linked user ID for shared wallets
+  async resolveUserId(userId) {
+    const { data } = await supabase
+      .from('user_settings')
+      .select('linked_to')
+      .eq('user_id', String(userId))
+      .maybeSingle();
+      
+    return data?.linked_to ? data.linked_to : String(userId);
+  },
+
   // Get transactions for a user (with optional pagination)
   async getTransactions(userId, limit = null, offset = null) {
+    const resolvedId = await this.resolveUserId(userId);
     let query = supabase
       .from('transactions')
       .select('*', { count: 'exact' })
-      .eq('user_id', String(userId))
+      .eq('user_id', resolvedId)
       .order('date', { ascending: false });
 
     if (limit !== null) {
@@ -46,9 +58,10 @@ export const db = {
 
   // Add a new transaction
   async addTransaction(userId, { amount, type, category, description, date }) {
+    const resolvedId = await this.resolveUserId(userId);
     const newTransaction = {
       id: 'tx_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
-      user_id: String(userId),
+      user_id: resolvedId,
       amount: parseFloat(amount),
       type: type || 'expense', // 'expense' or 'income'
       category: category || 'Boshqa',
@@ -71,10 +84,11 @@ export const db = {
 
   // Delete a transaction
   async deleteTransaction(userId, transactionId) {
+    const resolvedId = await this.resolveUserId(userId);
     const { error } = await supabase
       .from('transactions')
       .delete()
-      .eq('user_id', String(userId))
+      .eq('user_id', resolvedId)
       .eq('id', transactionId);
 
     if (error) {
@@ -86,18 +100,27 @@ export const db = {
 
   // Get budget & settings
   async getSettings(userId, firstName = '', username = '') {
-    const { data, error } = await supabase
+    // We get the raw user settings first to see if they are linked
+    const { data: rawData } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', String(userId))
       .maybeSingle();
 
-    if (error) {
-      console.error('Supabase error fetching settings:', error);
-      throw error;
+    const resolvedId = rawData?.linked_to ? rawData.linked_to : String(userId);
+    
+    let targetData = rawData;
+    if (rawData?.linked_to) {
+      // If linked, fetch the target's settings for budget/currency
+      const { data: linkedData } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', resolvedId)
+        .maybeSingle();
+      targetData = linkedData || rawData;
     }
 
-    if (!data) {
+    if (!targetData && !rawData) {
       // Create and return default settings if not exists
       const defaultSettings = {
         user_id: String(userId),
@@ -135,16 +158,20 @@ export const db = {
       if (updated) return updated;
     }
 
-    return data;
+    // Pass back their own linked_to status regardless of whose budget they are using
+    targetData.my_linked_to = rawData?.linked_to || null;
+    return targetData;
   },
 
   // Update budget & settings
   async updateSettings(userId, settings) {
+    // If they update linked_to, it applies to THEIR account, not the resolved one
     const updateData = {
-      user_id: String(userId),
-      currency: settings.currency || 'UZS',
-      budget: settings.budget !== undefined ? parseFloat(settings.budget) : 0
+      user_id: String(userId)
     };
+    if (settings.currency !== undefined) updateData.currency = settings.currency;
+    if (settings.budget !== undefined) updateData.budget = parseFloat(settings.budget);
+    if (settings.linked_to !== undefined) updateData.linked_to = settings.linked_to;
 
     const { data, error } = await supabase
       .from('user_settings')
@@ -257,46 +284,56 @@ export const db = {
   // CATEGORIES
   // -------------------------
   async getCategories(userId) {
+    const resolvedId = await this.resolveUserId(userId);
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .eq('user_id', String(userId));
+      .eq('user_id', resolvedId);
       
     if (error) {
       console.error('Supabase error fetching categories:', error);
-      // Fallback defaults if table doesn't exist yet
       if (error.code === '42P01') return [];
       throw error;
     }
     return data || [];
   },
 
-  async addCategory(userId, type, name) {
+  async addCategory(userId, category) {
+    const resolvedId = await this.resolveUserId(userId);
     const { data, error } = await supabase
       .from('categories')
-      .insert([{ user_id: String(userId), type, name }])
+      .insert([{
+        user_id: resolvedId,
+        type: category.type,
+        name: category.name
+      }])
       .select()
       .single();
+
     if (error) throw error;
     return data;
   },
 
   async deleteCategory(userId, type, name) {
+    const resolvedId = await this.resolveUserId(userId);
     const { error } = await supabase
       .from('categories')
       .delete()
-      .match({ user_id: String(userId), type, name });
+      .match({ user_id: resolvedId, type, name });
+
     if (error) throw error;
     return true;
   },
 
   async updateCategory(userId, type, oldName, newName) {
+    const resolvedId = await this.resolveUserId(userId);
     const { data, error } = await supabase
       .from('categories')
       .update({ name: newName })
-      .match({ user_id: String(userId), type, name: oldName })
+      .match({ user_id: resolvedId, type, name: oldName })
       .select()
       .single();
+
     if (error) throw error;
     return data;
   },
@@ -305,41 +342,82 @@ export const db = {
   // RECURRING TRANSACTIONS
   // -------------------------
   async getRecurringTransactions(userId) {
+    const resolvedId = await this.resolveUserId(userId);
     const { data, error } = await supabase
       .from('recurring_transactions')
       .select('*')
-      .eq('user_id', String(userId))
-      .order('created_at', { ascending: false });
-    
+      .eq('user_id', resolvedId);
     if (error) {
-      if (error.code === '42P01') return []; // table not found fallback
+      if (error.code === '42P01') return [];
       throw error;
     }
-    return data || [];
+    return data;
   },
 
-  async addRecurringTransaction(userId, { type, category, amount, description, cron_expression }) {
+  async addRecurringTransaction(userId, tx) {
+    const resolvedId = await this.resolveUserId(userId);
     const { data, error } = await supabase
       .from('recurring_transactions')
-      .insert([{ 
-        user_id: String(userId), 
-        type, 
-        category, 
-        amount: parseFloat(amount), 
-        description, 
-        cron_expression 
-      }])
-      .select()
-      .single();
+      .insert([{ ...tx, user_id: resolvedId }])
+      .select().single();
     if (error) throw error;
     return data;
   },
 
-  async deleteRecurringTransaction(id) {
+  async deleteRecurringTransaction(userId, id) {
+    const resolvedId = await this.resolveUserId(userId);
     const { error } = await supabase
       .from('recurring_transactions')
       .delete()
-      .eq('id', id);
+      .match({ user_id: resolvedId, id });
+    if (error) throw error;
+    return true;
+  },
+
+  // -------------------------
+  // DEBTS (Qarz daftari)
+  // -------------------------
+  async getDebts(userId) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('debts')
+      .select('*')
+      .eq('user_id', resolvedId)
+      .order('due_date', { ascending: true });
+    if (error) {
+      if (error.code === '42P01') return [];
+      throw error;
+    }
+    return data;
+  },
+
+  async addDebt(userId, debtData) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([{ ...debtData, user_id: resolvedId }])
+      .select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateDebt(userId, id, updates) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('debts')
+      .update(updates)
+      .match({ user_id: resolvedId, id })
+      .select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteDebt(userId, id) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { error } = await supabase
+      .from('debts')
+      .delete()
+      .match({ user_id: resolvedId, id });
     if (error) throw error;
     return true;
   }

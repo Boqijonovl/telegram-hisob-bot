@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
 import axios from 'axios';
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -530,7 +531,10 @@ Siz belgilagan oylik harajatlar limiti (${new Intl.NumberFormat('uz-UZ').format(
 
   // Launch bot
   bot.launch()
-    .then(() => console.log('🚀 Telegram Bot muvaffaqiyatli ishga tushdi!'))
+    .then(() => {
+      console.log('🚀 Telegram Bot muvaffaqiyatli ishga tushdi!');
+      initCronJobs(); // Start cron jobs
+    })
     .catch((err) => console.error('❌ Telegram Botni ishga tushirishda xato:', err.message));
 
   process.once('SIGINT', () => bot && bot.stop('SIGINT'));
@@ -585,4 +589,39 @@ export async function broadcastMessage(message) {
     console.error('Error in broadcastMessage:', error);
     throw error;
   }
+}
+
+// CRON JOBS for Scheduled Tasks
+export function initCronJobs() {
+  // Run every day at 09:00 AM
+  cron.schedule('0 9 * * *', async () => {
+    if (!bot) return;
+    try {
+      console.log('⏰ Running daily debts cron job...');
+      const today = new Date().toISOString().split('T')[0];
+      const users = await db.getAllUserSettings();
+      
+      for (const user of users) {
+        if (user.user_id === '123456') continue;
+        
+        try {
+          const debts = await db.getDebts(user.user_id);
+          const dueDebts = debts.filter(d => !d.is_paid && d.due_date === today);
+          
+          for (const debt of dueDebts) {
+            const formattedAmount = new Intl.NumberFormat('uz-UZ').format(debt.amount);
+            const typeStr = debt.type === 'given' ? 'qarzni qaytarib olishingiz' : 'qarzni qaytarishingiz';
+            
+            const message = `🔔 *Eslatma\\! \\(Qarz daftari\\)*\n\nBugun *${escapeMarkdown(debt.person_name)}* bilan hisob\\-kitob qilish muddati yetib keldi\\!\n\n💰 Summa: *${escapeMarkdown(formattedAmount)}*\n📝 Holati: Siz bu odamdan ${escapeMarkdown(typeStr)} kerak\\.`;
+            
+            await bot.telegram.sendMessage(user.user_id, message, { parse_mode: 'MarkdownV2' });
+          }
+        } catch (e) {
+          console.error(`Error processing debts for user ${user.user_id}:`, e);
+        }
+      }
+    } catch (error) {
+      console.error('Error in cron job execution:', error);
+    }
+  });
 }

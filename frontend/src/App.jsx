@@ -27,6 +27,7 @@ const VaultModal = lazy(() => import('./components/VaultModal'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const History = lazy(() => import('./components/History'));
 const CategoryManager = lazy(() => import('./components/CategoryManager'));
+const Debts = lazy(() => import('./components/Debts'));
 
 // Dynamically compute API URL based on frontend host
 const getApiUrl = () => {
@@ -297,7 +298,7 @@ function App() {
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       
       // Refresh database records
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
     } catch (error) {
       console.error('Error adding transaction:', error);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
@@ -337,7 +338,7 @@ function App() {
 
       showToast(t.toastDeleted);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
     } catch (error) {
       console.error('Error deleting transaction:', error);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
@@ -484,8 +485,17 @@ function App() {
   useEffect(() => {
     if (activeTab === 'admin' && settings.isAdmin) {
       fetchAdminUsers();
+      queryClient.prefetchQuery({
+        queryKey: ['debts', tgUser?.id],
+        queryFn: async () => {
+          const res = await fetch(`${API_URL}/api/debts`, {
+            headers: { 'x-telegram-user-id': tgUser?.id || '123456' }
+          });
+          return res.json();
+        }
+      });
     }
-  }, [activeTab, settings.isAdmin]);
+  }, [tgUser, activeTab, queryClient]);
 
   // Format amount utility
   const formatAmount = (num) => {
@@ -644,6 +654,15 @@ function App() {
             />
           )}
 
+          {activeTab === 'debts' && (
+            <Debts 
+              tgUser={tgUser}
+              apiUrl={API_URL}
+              t={t}
+              formatAmount={formatAmount}
+            />
+          )}
+
           {activeTab === 'profile' && (
             <Profile
               tgUser={tgUser}
@@ -744,6 +763,14 @@ function App() {
         >
           <PieChart size={22} />
           <span style={{ fontSize: '10px', marginTop: '4px' }}>{t.analytics}</span>
+        </button>
+
+        <button 
+          className={`nav-item ${activeTab === 'debts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('debts')}
+        >
+          <Users size={22} />
+          <span style={{ fontSize: '10px', marginTop: '4px' }}>Qarzlar</span>
         </button>
 
         <button 

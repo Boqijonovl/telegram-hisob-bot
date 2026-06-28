@@ -8,8 +8,11 @@ import {
   Moon,
   Sun,
   X,
-  Layers
+  Layers,
+  Link,
+  Copy
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 function Profile({ 
   tgUser, 
@@ -27,6 +30,28 @@ function Profile({
   toggleTheme
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [partnerId, setPartnerId] = useState('');
+  const queryClient = useQueryClient();
+
+  const handleLinkAccount = async () => {
+    try {
+      await fetch(`${getApiUrl()}/api/settings/link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-user-id': tgUser?.id || '123456' },
+        body: JSON.stringify({ linked_to: partnerId || null })
+      });
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      setShowLinkModal(false);
+      queryClient.invalidateQueries({ queryKey: ['appData'] });
+    } catch (e) { console.error(e); }
+  };
+
+  const getApiUrl = () => {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:5000';
+    return 'https://hisob-bot.onrender.com';
+  };
 
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
@@ -58,15 +83,19 @@ function Profile({
           <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Tarixni ko'rish</div>
         </div>
 
-        {/* Obuna */}
-        <div style={{
-          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
+        {/* Umumiy Hisob */}
+        <div onClick={() => setShowLinkModal(true)} style={{
+          background: settings?.my_linked_to ? 'rgba(16, 185, 129, 0.05)' : 'var(--secondary-bg-color)', 
+          borderRadius: '16px', padding: '16px', cursor: 'pointer', 
+          border: settings?.my_linked_to ? '1px solid var(--income-color)' : '1px solid var(--card-border)'
         }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <CreditCard size={16} />
+            <Link size={16} />
           </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Obuna</div>
-          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Status va tariflar</div>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Umumiy Hisob</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>
+            {settings?.my_linked_to ? 'Ulangan' : 'Boshqa hisobga ulanish'}
+          </div>
         </div>
 
         {/* Sozlamalar */}
@@ -174,6 +203,61 @@ function Profile({
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Link Account Modal */}
+      {showLinkModal && (
+        <div className="settings-modal" style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+          background: 'var(--bg-color)', zIndex: 1000, padding: '20px', 
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700' }}>Umumiy Hisob</h2>
+            <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-color)' }}>
+              <X size={24} />
+            </button>
+          </div>
+
+          <p style={{ fontSize: '13px', color: 'var(--hint-color)', marginBottom: '20px', lineHeight: '1.5' }}>
+            Oila a'zolaringiz yoki sherigingiz bilan bitta hisobni yuritish uchun ularning <b>Telegram ID</b> raqamini kiriting. Yoki o'z ID raqamingizni ularga bering.
+          </p>
+
+          <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px dashed var(--card-border)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '8px' }}>Sizning Telegram ID raqamingiz:</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', color: 'var(--button-color)' }}>
+                {tgUser?.id || '123456'}
+              </span>
+              <button 
+                onClick={() => { navigator.clipboard.writeText(tgUser?.id || '123456'); window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light'); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-color)', cursor: 'pointer' }}
+              >
+                <Copy size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Sherikning ID raqamini kiriting:</label>
+            <input 
+              type="text" 
+              placeholder="Masalan: 987654321" 
+              value={partnerId}
+              onChange={e => setPartnerId(e.target.value)}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'var(--secondary-bg-color)', border: '1px solid var(--card-border)', color: 'var(--text-color)', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {settings?.my_linked_to ? (
+            <button onClick={() => { setPartnerId(''); handleLinkAccount(); }} style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--expense-color)', border: 'none', fontWeight: '700' }}>
+              Hisobni uzish (Unlink)
+            </button>
+          ) : (
+            <button onClick={handleLinkAccount} disabled={!partnerId} style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--button-color)', color: 'white', border: 'none', fontWeight: '700', opacity: !partnerId ? 0.5 : 1 }}>
+              Hisobni ulash
+            </button>
+          )}
         </div>
       )}
     </div>
