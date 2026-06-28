@@ -458,13 +458,12 @@ export const db = {
   async addDebt(userId, { type, person_name, amount, due_date }) {
     const resolvedId = await this.resolveUserId(userId);
     const newDebt = {
-      id: 'debt_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now(),
       user_id: resolvedId,
       type: type,
       person_name: person_name,
       amount: parseFloat(amount),
       due_date: due_date || null,
-      status: 'pending',
+      is_paid: false,
       created_at: new Date().toISOString()
     };
 
