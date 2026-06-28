@@ -66,8 +66,9 @@ function Profile({
     }
   });
 
-  const totalGiven = debts.filter(d => d.type === 'given').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
-  const totalTaken = debts.filter(d => d.type === 'taken').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+  const debtsArray = Array.isArray(debts) ? debts : [];
+  const totalGiven = debtsArray.filter(d => d.type === 'given').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+  const totalTaken = debtsArray.filter(d => d.type === 'taken').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
 
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>

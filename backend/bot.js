@@ -4,6 +4,7 @@ import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
 import axios from 'axios';
 import cron from 'node-cron';
+import * as XLSX from 'xlsx';
 
 dotenv.config();
 
@@ -221,22 +222,78 @@ Hisob-kitob botiga xush kelibsiz!
       const settings = await db.getSettings(userId);
       
       if (!transactions || transactions.length === 0) {
-        return ctx.reply("Sizda hali hech qanday tranzaksiyalar mavjud emas. Zaxira fayli yaratilmadi.");
+        return ctx.reply("Sizda hali hech qanday tranzaksiyalar mavjud emas. Hisobot fayli yaratilmadi.");
       }
 
-      const backupData = {
-        userId,
-        timestamp: new Date().toISOString(),
-        settings,
-        transactions
-      };
+      // Sort transactions by date ascending
+      const sortedTx = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      const startDate = new Date(sortedTx[0].date).toLocaleDateString('uz-UZ');
+      const endDate = new Date(sortedTx[sortedTx.length - 1].date).toLocaleDateString('uz-UZ');
+      
+      let totalIncome = 0;
+      let totalExpense = 0;
 
-      const fileContent = JSON.stringify(backupData, null, 2);
-      const buffer = Buffer.from(fileContent, 'utf-8');
+      const excelData = sortedTx.map(tx => {
+        const amount = parseFloat(tx.amount);
+        if (tx.type === 'income') totalIncome += amount;
+        else totalExpense += amount;
+        
+        return {
+          "Sana": new Date(tx.date).toLocaleString('uz-UZ'),
+          "Turi": tx.type === 'income' ? 'Daromad' : 'Harajat',
+          "Kategoriya": tx.category,
+          "Summa": amount,
+          "Izoh": tx.description || ''
+        };
+      });
+
+      // Add empty row
+      excelData.push({ "Sana": "", "Turi": "", "Kategoriya": "", "Summa": "", "Izoh": "" });
+      
+      // Add totals
+      excelData.push({
+        "Sana": `Davr: ${startDate} dan ${endDate} gacha`,
+        "Turi": "",
+        "Kategoriya": "Jami Daromad:",
+        "Summa": totalIncome,
+        "Izoh": ""
+      });
+      excelData.push({
+        "Sana": "",
+        "Turi": "",
+        "Kategoriya": "Jami Harajat:",
+        "Summa": totalExpense,
+        "Izoh": ""
+      });
+      excelData.push({
+        "Sana": "",
+        "Turi": "",
+        "Kategoriya": "Sof Qoldiq:",
+        "Summa": totalIncome - totalExpense,
+        "Izoh": ""
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Auto-size columns slightly
+      const wscols = [
+        {wch: 20}, // Sana
+        {wch: 10}, // Turi
+        {wch: 20}, // Kategoriya
+        {wch: 15}, // Summa
+        {wch: 30}  // Izoh
+      ];
+      worksheet['!cols'] = wscols;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Hisobot");
+
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
       await ctx.replyWithDocument(
-        { source: buffer, filename: `hisob_backup_${userId}.json` },
-        { caption: "📊 Sizning barcha tranzaksiyalaringiz zaxira nusxasi (JSON formatida)." }
+        { source: buffer, filename: `hisobot_${userId}.xlsx` },
+        { caption: `📊 Sizning barcha tranzaksiyalaringiz Excel hisoboti.\nDavr: ${startDate} - ${endDate}` }
       );
     } catch (error) {
       console.error('Backup creation error:', error);

@@ -158,7 +158,7 @@ function App() {
     'x-telegram-username': encodeURIComponent(tgUser?.username || '')
   };
 
-  const { data: queryData, isLoading: queryLoading, refetch: fetchData } = useQuery({
+  const { data: queryData, isLoading: queryLoading, isError, refetch: fetchData } = useQuery({
     queryKey: ['appData', tgUser?.id],
     queryFn: async () => {
       if (!tgUser?.id) return null;
@@ -215,7 +215,10 @@ function App() {
     if (queryLoading && !queryData) {
       setLoading(true);
     }
-  }, [queryLoading, queryData]);
+    if (isError) {
+      setLoading(false);
+    }
+  }, [queryLoading, queryData, isError]);
 
   const handlePrevMonth = () => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
