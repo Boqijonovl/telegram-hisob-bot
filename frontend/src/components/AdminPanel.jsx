@@ -63,7 +63,16 @@ function AdminPanel({
               const isSelf = String(user.user_id) === String(tgUser.id);
               return (
                 <div key={user.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div 
+                    onClick={() => {
+                      if (user.username) {
+                        window.open(`https://t.me/${user.username}`, '_blank');
+                      } else {
+                        window.open(`tg://user?id=${user.user_id}`, '_blank');
+                      }
+                    }}
+                    style={{ cursor: 'pointer', fontSize: '13px', fontWeight: '600', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
                     {user.first_name || 'Noma\'lum'} {isSelf ? '(Siz)' : ''}
                     <div style={{ fontSize: '11px', color: 'var(--hint-color)', fontWeight: '400', marginTop: '2px' }}>ID: {user.user_id}</div>
                   </div>
