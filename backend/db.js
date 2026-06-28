@@ -22,19 +22,26 @@ const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
 });
 
 export const db = {
-  // Get all transactions for a user
-  async getTransactions(userId) {
-    const { data, error } = await supabase
+  // Get transactions for a user (with optional pagination)
+  async getTransactions(userId, limit = null, offset = null) {
+    let query = supabase
       .from('transactions')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', String(userId))
       .order('date', { ascending: false });
+
+    if (limit !== null) {
+      const start = offset || 0;
+      query = query.range(start, start + limit - 1);
+    }
+
+    const { data, count, error } = await query;
 
     if (error) {
       console.error('Supabase error fetching transactions:', error);
       throw error;
     }
-    return data || [];
+    return { data: data || [], total: count || 0 };
   },
 
   // Add a new transaction
@@ -155,7 +162,7 @@ export const db = {
 
   // Get statistics
   async getStats(userId) {
-    const transactions = await this.getTransactions(userId);
+    const { data: transactions } = await this.getTransactions(userId);
     const settings = await this.getSettings(userId);
     
     let totalIncome = 0;

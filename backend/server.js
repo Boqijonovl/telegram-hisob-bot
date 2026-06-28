@@ -31,11 +31,14 @@ const getUserId = (req) => {
 
 // --- API Endpoints ---
 
-// Get all transactions
+// Get all transactions (with pagination)
 app.get('/api/transactions', async (req, res) => {
   try {
     const userId = getUserId(req);
-    const transactions = await db.getTransactions(userId);
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+    const offset = req.query.offset ? parseInt(req.query.offset) : null;
+    
+    const transactions = await db.getTransactions(userId, limit, offset);
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);

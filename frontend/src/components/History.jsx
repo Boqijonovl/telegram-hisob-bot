@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, TrendingUp, TrendingDown, Loader } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
 const formatDayHeader = (dateStr, t, lang) => {
@@ -77,7 +77,23 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
 }
 
 function History({ transactions, formatAmount, onDelete, t, lang, setActiveTab }) {
-  const groupedDays = groupTransactionsByDay(transactions);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loaderRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount(prev => Math.min(prev + 20, transactions.length));
+      }
+    }, { threshold: 0.1, rootMargin: '100px' });
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+    return () => observer.disconnect();
+  }, [transactions.length]);
+
+  const groupedDays = groupTransactionsByDay(transactions.slice(0, visibleCount));
 
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
@@ -116,6 +132,12 @@ function History({ transactions, formatAmount, onDelete, t, lang, setActiveTab }
               </div>
             </div>
           ))
+        )}
+        
+        {visibleCount < transactions.length && (
+          <div ref={loaderRef} style={{ padding: '20px', textAlign: 'center', color: 'var(--hint-color)' }}>
+            <Loader size={24} style={{ animation: 'spin 1s infinite linear' }} />
+          </div>
         )}
       </div>
     </div>

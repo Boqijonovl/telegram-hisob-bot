@@ -216,7 +216,7 @@ Hisob-kitob botiga xush kelibsiz!
   bot.command('backup', async (ctx) => {
     const userId = String(ctx.from.id);
     try {
-      const transactions = await db.getTransactions(userId);
+      const { data: transactions } = await db.getTransactions(userId);
       const settings = await db.getSettings(userId);
       
       if (!transactions || transactions.length === 0) {

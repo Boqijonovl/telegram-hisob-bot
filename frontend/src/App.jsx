@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   PieChart, 
@@ -133,22 +134,33 @@ function App() {
     }
   }, []);
 
-  // Fetch data when user ID is available
+  // Prefetch components to eliminate load times on tab switch
   useEffect(() => {
-    if (tgUser?.id) {
-      fetchData();
-    }
-  }, [tgUser]);
+    const prefetch = () => {
+      import('./components/Dashboard');
+      import('./components/Analytics');
+      import('./components/AddTransaction');
+      import('./components/Profile');
+      import('./components/History');
+      import('./components/CategoryManager');
+      import('./components/VaultModal');
+      import('./components/AdminPanel');
+    };
+    setTimeout(prefetch, 2000);
+  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const headers = { 
-        'x-telegram-user-id': String(tgUser.id),
-        'x-telegram-first-name': encodeURIComponent(tgUser.first_name || ''),
-        'x-telegram-username': encodeURIComponent(tgUser.username || '')
-      };
-      
+  const queryClient = useQueryClient();
+
+  const headers = { 
+    'x-telegram-user-id': String(tgUser?.id || '123456'),
+    'x-telegram-first-name': encodeURIComponent(tgUser?.first_name || ''),
+    'x-telegram-username': encodeURIComponent(tgUser?.username || '')
+  };
+
+  const { data: queryData, isLoading: queryLoading, refetch: fetchData } = useQuery({
+    queryKey: ['appData', tgUser?.id],
+    queryFn: async () => {
+      if (!tgUser?.id) return null;
       const [txRes, settingsRes, catRes] = await Promise.all([
         fetch(`${API_URL}/api/transactions`, { headers }),
         fetch(`${API_URL}/api/settings`, { headers }),
@@ -162,31 +174,47 @@ function App() {
       const txData = await txRes.json();
       const settingsData = await settingsRes.json();
       const catData = catRes.ok ? await catRes.json() : [];
-
+      
+      let expCats = [];
+      let incCats = [];
       if (catData && catData.length > 0) {
-        const exp = catData.filter(c => c.type === 'expense').map(c => c.name);
-        const inc = catData.filter(c => c.type === 'income').map(c => c.name);
-        setCategories(prev => ({
-          expense: exp.length > 0 ? exp : prev.expense,
-          income: inc.length > 0 ? inc : prev.income
-        }));
+        expCats = catData.filter(c => c.type === 'expense').map(c => c.name);
+        incCats = catData.filter(c => c.type === 'income').map(c => c.name);
       }
 
-      // Check if blocked by admin
-      if (settingsData.is_blocked) {
+      return {
+        transactions: txData.data || txData,
+        settings: settingsData,
+        expenseCats: expCats,
+        incomeCats: incCats
+      };
+    },
+    enabled: !!tgUser?.id,
+    staleTime: 60 * 1000 // 1 minute cache
+  });
+
+  useEffect(() => {
+    if (queryData) {
+      if (queryData.settings.is_blocked) {
         setIsBlockedUser(true);
         return;
       }
-
-      setTransactions(txData);
-      setSettings(settingsData);
-    } catch (error) {
-      console.error('Error fetching data from backend:', error);
-      showToast(t.toastError || 'Xatolik yuz berdi!', 'error');
-    } finally {
+      setTransactions(queryData.transactions);
+      setSettings(queryData.settings);
+      
+      setCategories(prev => ({
+        expense: queryData.expenseCats.length > 0 ? queryData.expenseCats : prev.expense,
+        income: queryData.incomeCats.length > 0 ? queryData.incomeCats : prev.income
+      }));
       setLoading(false);
     }
-  };
+  }, [queryData]);
+
+  useEffect(() => {
+    if (queryLoading && !queryData) {
+      setLoading(true);
+    }
+  }, [queryLoading, queryData]);
 
   const handlePrevMonth = () => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
