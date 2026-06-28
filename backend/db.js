@@ -251,6 +251,22 @@ export const db = {
     return data;
   },
 
+  // Make user an admin
+  async makeAdmin(userId) {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update({ is_admin: true })
+      .eq('user_id', String(userId))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error making admin:', error);
+      throw error;
+    }
+    return data;
+  },
+
   // Reset user data (delete all transactions and reset settings budget)
   async resetUserData(userId) {
     // 1. Delete all transactions

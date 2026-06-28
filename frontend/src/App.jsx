@@ -694,6 +694,8 @@ function App() {
               tgUser={tgUser}
               t={t}
               setActiveTab={setActiveTab}
+              apiUrl={API_URL}
+              formatAmount={formatAmount}
             />
           )}
 

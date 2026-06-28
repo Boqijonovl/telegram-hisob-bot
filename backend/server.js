@@ -253,13 +253,26 @@ app.delete('/api/recurring/:id', async (req, res) => {
 
 // --- Admin Panel Endpoints ---
 
+// Helper to check admin rights
+const checkAdmin = async (req) => {
+  const adminId = getUserId(req);
+  if (process.env.ADMIN_ID && String(adminId) === String(process.env.ADMIN_ID)) return true;
+  
+  try {
+    const settings = await db.getSettings(adminId);
+    if (settings && settings.is_admin) return true;
+  } catch (e) {
+    console.error('Error checking admin status', e);
+  }
+  return false;
+};
+
 // Get all users (Admin only)
 app.get('/api/admin/users', async (req, res) => {
   try {
-    const adminId = getUserId(req);
-    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
-      return res.status(403).json({ error: 'Ruxsat berilmagan' });
-    }
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    
     const allUsers = await db.getAllUserSettings();
     res.json(allUsers);
   } catch (error) {
@@ -271,10 +284,9 @@ app.get('/api/admin/users', async (req, res) => {
 // Block/unblock a user (Admin only)
 app.post('/api/admin/block', async (req, res) => {
   try {
-    const adminId = getUserId(req);
-    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
-      return res.status(403).json({ error: 'Ruxsat berilmagan' });
-    }
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    
     const { targetUserId, isBlocked } = req.body;
     if (!targetUserId) {
       return res.status(400).json({ error: 'Target user ID is required' });
@@ -290,10 +302,9 @@ app.post('/api/admin/block', async (req, res) => {
 // Broadcast push alert message to all users (Admin only)
 app.post('/api/admin/broadcast', async (req, res) => {
   try {
-    const adminId = getUserId(req);
-    if (!process.env.ADMIN_ID || String(adminId) !== String(process.env.ADMIN_ID)) {
-      return res.status(403).json({ error: 'Ruxsat berilmagan' });
-    }
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    
     const { message } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Message body cannot be empty' });
@@ -302,6 +313,38 @@ app.post('/api/admin/broadcast', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error in broadcast execution:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user stats (Admin only)
+app.get('/api/admin/users/:id/stats', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+
+    const targetUserId = req.params.id;
+    const stats = await db.getStats(targetUserId);
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Make user admin (Admin only)
+app.post('/api/admin/make-admin', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+
+    const { targetUserId } = req.body;
+    if (!targetUserId) return res.status(400).json({ error: 'Target user ID is required' });
+
+    const updated = await db.makeAdmin(targetUserId);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error making admin:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

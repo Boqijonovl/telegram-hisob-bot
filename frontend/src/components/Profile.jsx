@@ -10,9 +10,12 @@ import {
   X,
   Layers,
   Link,
-  Copy
+  Copy,
+  ChevronRight,
+  TrendingDown,
+  TrendingUp
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 function Profile({ 
   tgUser, 
@@ -53,87 +56,111 @@ function Profile({
     return 'https://hisob-bot.onrender.com';
   };
 
+  const { data: debts = [] } = useQuery({
+    queryKey: ['debts'],
+    queryFn: async () => {
+      const res = await fetch(`${getApiUrl()}/api/debts`, {
+        headers: { 'x-telegram-user-id': tgUser?.id || '123456' }
+      });
+      return res.json();
+    }
+  });
+
+  const totalGiven = debts.filter(d => d.type === 'given').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+  const totalTaken = debts.filter(d => d.type === 'taken').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
       
-      {/* 2x2 Grid Options */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-        
-        {/* Xazna (Vault) */}
-        <div onClick={onOpenVault} style={{
-          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <Wallet size={16} />
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>{t.vault}</div>
-          <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-color)', marginTop: '4px' }}>
-            {formatAmount(vaultBalance)}
-          </div>
+      {/* User Header Info */}
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--button-color), #0d9488)', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', color: 'white', fontWeight: 'bold' }}>
+          {tgUser?.first_name?.charAt(0) || '?'}
         </div>
-
-        {/* History */}
-        <div onClick={() => setActiveTab('history')} style={{
-          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <History size={16} />
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Barcha operatsiyalar</div>
-          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Tarixni ko'rish</div>
-        </div>
-
-        {/* Umumiy Hisob */}
-        <div onClick={() => setShowLinkModal(true)} style={{
-          background: settings?.my_linked_to ? 'rgba(16, 185, 129, 0.05)' : 'var(--secondary-bg-color)', 
-          borderRadius: '16px', padding: '16px', cursor: 'pointer', 
-          border: settings?.my_linked_to ? '1px solid var(--income-color)' : '1px solid var(--card-border)'
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <Link size={16} />
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Umumiy Hisob</div>
-          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>
-            {settings?.my_linked_to ? 'Ulangan' : 'Boshqa hisobga ulanish'}
-          </div>
-        </div>
-
-        {/* Sozlamalar */}
-        <div onClick={() => setShowSettings(true)} style={{
-          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <Settings size={16} />
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>{t.settings}</div>
-          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Til va mavzu</div>
-        </div>
-
-        {/* Kategoriyalar */}
-        <div onClick={() => setActiveTab('category-manager')} style={{
-          background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid var(--card-border)'
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <Layers size={16} />
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--hint-color)' }}>Kategoriyalar</div>
-          <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Qo'shish va o'zgartirish</div>
-        </div>
-        
-        {/* Admin Panel if Admin */}
-        {isAdmin && (
-          <div onClick={() => setActiveTab('admin')} style={{
-            background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', cursor: 'pointer', border: '1px solid rgba(239, 68, 68, 0.3)'
-          }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-              <ShieldAlert size={16} />
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--expense-color)' }}>{t.adminPanel}</div>
-            <div style={{ fontSize: '11px', fontWeight: '500', color: 'var(--hint-color)', marginTop: '4px' }}>Foydalanuvchilar boshqaruvi</div>
-          </div>
-        )}
-
+        <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>{tgUser?.first_name || 'Foydalanuvchi'}</h2>
+        <div style={{ fontSize: '13px', color: 'var(--hint-color)' }}>ID: {tgUser?.id}</div>
       </div>
+
+      {/* Qarzlar Hisoboti */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <TrendingUp size={14} color="var(--expense-color)" /> Sizdagi qarzlar
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--expense-color)' }}>{formatAmount(totalTaken)}</div>
+        </div>
+        <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <TrendingDown size={14} color="var(--income-color)" /> Siz bergan qarz
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--income-color)' }}>{formatAmount(totalGiven)}</div>
+        </div>
+      </div>
+
+      {/* iOS Style List Group 1: Moliyaviy */}
+      <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid var(--card-border)' }}>
+        
+        <div onClick={onOpenVault} style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--card-border)', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <Wallet size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Xazna (Vault)</div>
+          <div style={{ fontSize: '15px', color: 'var(--hint-color)', marginRight: '8px' }}>{formatAmount(vaultBalance)}</div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+
+        <div onClick={() => setActiveTab('history')} style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <History size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Barcha operatsiyalar</div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+      </div>
+
+      {/* iOS Style List Group 2: Sozlamalar */}
+      <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid var(--card-border)' }}>
+        
+        <div onClick={() => setActiveTab('category-manager')} style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--card-border)', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f59e0b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <Layers size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Kategoriyalar</div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+
+        <div onClick={() => setShowLinkModal(true)} style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--card-border)', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <Link size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Umumiy Hisob</div>
+          <div style={{ fontSize: '14px', color: settings?.my_linked_to ? 'var(--income-color)' : 'var(--hint-color)', marginRight: '8px' }}>
+            {settings?.my_linked_to ? 'Ulangan' : 'Ulanmagan'}
+          </div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+
+        <div onClick={() => setShowSettings(true)} style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ec4899', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <Settings size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Umumiy sozlamalar</div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+      </div>
+
+      {/* Admin Panel Group */}
+      {isAdmin && (
+        <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          <div onClick={() => setActiveTab('admin')} style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+              <ShieldAlert size={18} />
+            </div>
+            <div style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: 'var(--expense-color)' }}>{t.adminPanel}</div>
+            <ChevronRight size={18} color="var(--hint-color)" />
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal overlay */}
       {showSettings && (
