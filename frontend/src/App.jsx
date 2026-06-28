@@ -26,7 +26,6 @@ const VaultModal = lazy(() => import('./components/VaultModal'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const History = lazy(() => import('./components/History'));
 const CategoryManager = lazy(() => import('./components/CategoryManager'));
-import { translations } from './translations';
 
 // Dynamically compute API URL based on frontend host
 const getApiUrl = () => {
