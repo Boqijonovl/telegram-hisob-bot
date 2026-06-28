@@ -153,9 +153,9 @@ function App() {
   const queryClient = useQueryClient();
 
   const headers = { 
-    'x-telegram-user-id': String(tgUser?.id || '123456'),
-    'x-telegram-first-name': encodeURIComponent(tgUser?.first_name || ''),
-    'x-telegram-username': encodeURIComponent(tgUser?.username || '')
+    'x-telegram-user-id': String(tgUser?.id || '1037362053'),
+    'x-telegram-first-name': encodeURIComponent(tgUser?.first_name || 'Admin'),
+    'x-telegram-username': encodeURIComponent(tgUser?.username || 'admin')
   };
 
   const { data: queryData, isLoading: queryLoading, isError, refetch: fetchData } = useQuery({
