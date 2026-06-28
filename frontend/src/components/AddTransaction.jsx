@@ -75,12 +75,16 @@ function AddTransaction({ onClose, onSubmit, categories, t, tgUser, apiUrl }) {
       }
     }
 
+    const now = new Date();
+    const [year, month, day] = date.split('-');
+    const finalDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+
     await onSubmit({
       amount: expenseAmount,
       type,
       category: type === 'income' && category === 'Maosh' ? 'Daromad' : category,
       description: isSplit ? `${description.trim()} (Jami: ${parsedAmount})` : description.trim(),
-      date: new Date(date).toISOString()
+      date: finalDate.toISOString()
     });
     
     setIsSubmitting(false);
