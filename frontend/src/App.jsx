@@ -265,7 +265,7 @@ function App() {
       }
 
       showToast(txData.type === 'income' ? t.toastAddedIncome : t.toastAddedExpense);
-      setShowAddModal(false);
+      setActiveTab('dashboard');
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       
       // Refresh database records
@@ -452,9 +452,9 @@ function App() {
     }
   };
 
-  // Load admin panels if settings opens
+  // Load admin panels if admin tab opens
   useEffect(() => {
-    if (activeTab === 'settings' && settings.isAdmin) {
+    if (activeTab === 'admin' && settings.isAdmin) {
       fetchAdminUsers();
     }
   }, [activeTab, settings.isAdmin]);
