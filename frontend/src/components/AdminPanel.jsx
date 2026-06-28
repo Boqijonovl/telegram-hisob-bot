@@ -186,6 +186,25 @@ function AdminPanel({
                     {formatAmount(userStats.balance)}
                   </span>
                 </div>
+                
+                {userStats.recentTransactions && userStats.recentTransactions.length > 0 && (
+                  <div style={{ marginTop: '16px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-color)' }}>Oxirgi tranzaksiyalar:</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {userStats.recentTransactions.map(tx => (
+                        <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--card-border)', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: '600' }}>{tx.category}</span>
+                            <span style={{ color: 'var(--hint-color)', fontSize: '11px' }}>{new Date(tx.date).toLocaleDateString('uz-UZ')}</span>
+                          </div>
+                          <div style={{ fontWeight: 'bold', color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)' }}>
+                            {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '20px', color: 'var(--expense-color)' }}>Xatolik yuz berdi</div>
