@@ -145,12 +145,12 @@ export const db = {
     }
 
     // Update names if changed
-    if ((firstName && data.first_name !== firstName) || (username && data.username !== username)) {
+    if ((firstName && targetData.first_name !== firstName) || (username && targetData.username !== username)) {
       const { data: updated } = await supabase
         .from('user_settings')
         .update({
-          first_name: firstName || data.first_name,
-          username: username || data.username
+          first_name: firstName || targetData.first_name,
+          username: username || targetData.username
         })
         .eq('user_id', String(userId))
         .select()
