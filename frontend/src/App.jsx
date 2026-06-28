@@ -670,34 +670,34 @@ function App() {
               t={t}
             />
           )}
+
+          {/* Add Transaction Tab */}
+          {activeTab === 'add-transaction' && (
+            <AddTransaction 
+              onClose={() => setActiveTab('dashboard')}
+              onSubmit={(tx) => {
+                 handleAddTransaction(tx);
+                 setActiveTab('dashboard');
+              }}
+              categories={categories}
+              t={t}
+            />
+          )}
+
+          {/* Vault Modal */}
+          {showVaultModal && (
+            <VaultModal 
+              onClose={() => setShowVaultModal(false)}
+              vaultBalance={monthlyStats.vaultBalance}
+              onSubmit={async (tx) => {
+                await handleAddTransaction(tx);
+                setShowVaultModal(false);
+              }}
+              t={t}
+              formatAmount={formatAmount}
+            />
+          )}
         </Suspense>
-      )}
-
-      {/* Add Transaction Tab */}
-      {activeTab === 'add-transaction' && (
-        <AddTransaction 
-          onClose={() => setActiveTab('dashboard')}
-          onSubmit={(tx) => {
-             handleAddTransaction(tx);
-             setActiveTab('dashboard');
-          }}
-          categories={categories}
-          t={t}
-        />
-      )}
-
-      {/* Vault Modal */}
-      {showVaultModal && (
-        <VaultModal 
-          onClose={() => setShowVaultModal(false)}
-          vaultBalance={monthlyStats.vaultBalance}
-          onSubmit={async (tx) => {
-            await handleAddTransaction(tx);
-            setShowVaultModal(false);
-          }}
-          t={t}
-          formatAmount={formatAmount}
-        />
       )}
 
       {/* Persistent Floating Bottom Navigation Bar */}
