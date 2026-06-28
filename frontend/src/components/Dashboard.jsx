@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Trash2, 
   Apple, 
@@ -158,14 +158,14 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   const pdfRef = useRef(null);
 
   // Group transactions for "Tranzaksiya" tab
-  const groupedDays = groupTransactionsByDay(transactions);
+  const groupedDays = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
 
-  // Filter out 'Xazna' from display if needed, but the stats already computes it correctly
-  
-  const incomeCount = transactions.filter(t => t.type === 'income').length;
-  const expenseCount = transactions.filter(t => t.type === 'expense').length;
-
-  const totalOps = incomeCount + expenseCount;
+  // Calculations
+  const { incomeCount, expenseCount, totalOps } = useMemo(() => {
+    const inc = transactions.filter(t => t.type === 'income').length;
+    const exp = transactions.filter(t => t.type === 'expense').length;
+    return { incomeCount: inc, expenseCount: exp, totalOps: inc + exp };
+  }, [transactions]);
   const progressPercent = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : (stats.totalExpense > 0 ? 100 : 0);
 
   const handleExportPDF = async () => {
@@ -209,12 +209,9 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   return (
     <div style={{ paddingBottom: '30px' }} ref={pdfRef}>
       {/* Top Balance Card */}
-      <div style={{
-        background: 'var(--secondary-bg-color)',
-        borderRadius: '24px',
+      <div className="balance-card glass-panel" style={{
         padding: '20px',
         marginBottom: '20px',
-        border: '1px solid var(--card-border)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <span style={{ fontSize: '13px', color: 'var(--hint-color)', fontWeight: '600' }}>Umumiy aylanma:</span>

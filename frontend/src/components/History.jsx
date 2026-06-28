@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Trash2, TrendingUp, TrendingDown, Loader } from 'lucide-react';
 import { getCategoryConfig } from './Dashboard';
 
@@ -93,7 +93,7 @@ function History({ transactions, formatAmount, onDelete, t, lang, setActiveTab }
     return () => observer.disconnect();
   }, [transactions.length]);
 
-  const groupedDays = groupTransactionsByDay(transactions.slice(0, visibleCount));
+  const groupedDays = useMemo(() => groupTransactionsByDay(transactions.slice(0, visibleCount)), [transactions, visibleCount]);
 
   return (
     <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>

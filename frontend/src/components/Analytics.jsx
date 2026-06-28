@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   PieChart, 
   TrendingUp, 
@@ -15,30 +15,32 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
   const hasExpenses = stats.totalExpense > 0;
 
   // Convert categories to the format expected by Analytics
-  const expenseCategories = stats.categories
+  const expenseCategories = useMemo(() => stats.categories
     .filter(c => c.expense > 0)
     .map(c => ({
       name: c.name,
       amount: c.expense,
       percentage: hasExpenses ? Math.round((c.expense / stats.totalExpense) * 100) : 0
     }))
-    .sort((a, b) => b.amount - a.amount);
+    .sort((a, b) => b.amount - a.amount), [stats.categories, hasExpenses, stats.totalExpense]);
   
   
   // Calculate Savings Rate
-  const savingsAmount = stats.totalIncome - stats.totalExpense;
-  const savingsRate = stats.totalIncome > 0 
-    ? Math.max(0, Math.round((savingsAmount / stats.totalIncome) * 100)) 
-    : 0;
+  const { savingsAmount, savingsRate, dailyAverage } = useMemo(() => {
+    const sAmount = stats.totalIncome - stats.totalExpense;
+    const sRate = stats.totalIncome > 0 
+      ? Math.max(0, Math.round((sAmount / stats.totalIncome) * 100)) 
+      : 0;
 
-  // Calculate Daily Average Expense
-  const currentDate = new Date();
-  const daysInCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const currentDay = currentDate.getDate();
-  const dailyAverage = hasExpenses ? Math.round(stats.totalExpense / currentDay) : 0;
+    const currentDate = new Date();
+    const currentDay = currentDate.getDate();
+    const dAverage = hasExpenses ? Math.round(stats.totalExpense / currentDay) : 0;
+    
+    return { savingsAmount: sAmount, savingsRate: sRate, dailyAverage: dAverage };
+  }, [stats.totalIncome, stats.totalExpense, hasExpenses]);
 
   // Dynamic Rule-Based AI Insights Engine translated based on lang
-  const generateInsights = () => {
+  const aiInsights = useMemo(() => {
     const insights = [];
 
     if (lang === 'ru') {
@@ -225,9 +227,14 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
     }
 
     return insights;
-  };
+  }, [lang, stats.totalIncome, savingsRate, savingsAmount, hasExpenses, expenseCategories, t.categories, stats.budget, stats.totalExpense]);
 
-  const activeInsights = generateInsights();
+  // Determine Insight Title based on lang
+  const insightTitle = lang === 'ru' ? 'Персонализированный AI Анализ' : 
+                       lang === 'en' ? 'Personalized AI Insights' : 
+                       'Shaxsiylashtirilgan AI Tahlil';
+
+  const activeInsights = aiInsights;
 
   // Selected or hovered category label configuration
   const centerCategory = hoveredCategory || (expenseCategories.length > 0 ? expenseCategories[0] : null);

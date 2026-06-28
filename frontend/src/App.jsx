@@ -773,19 +773,19 @@ function App() {
         </button>
 
         <button 
-          className={`nav-item ${activeTab === 'debts' ? 'active' : ''}`}
-          onClick={() => setActiveTab('debts')}
-        >
-          <Users size={22} />
-          <span style={{ fontSize: '10px', marginTop: '4px' }}>Qarzlar</span>
-        </button>
-
-        <button 
           className={`nav-item-plus ${activeTab === 'add-transaction' ? 'active' : ''}`}
           onClick={() => setActiveTab('add-transaction')}
           aria-label="Yangi tranzaksiya"
         >
           <Plus size={26} />
+        </button>
+
+        <button 
+          className={`nav-item ${activeTab === 'debts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('debts')}
+        >
+          <Users size={22} />
+          <span style={{ fontSize: '10px', marginTop: '4px' }}>Qarzlar</span>
         </button>
 
         <button 
