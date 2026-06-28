@@ -704,7 +704,7 @@ function App() {
 
           {activeTab === 'history' && (
             <History 
-              transactions={monthlyTransactions}
+              transactions={transactions}
               formatAmount={formatAmount}
               onDelete={handleDeleteTransaction}
               t={t}
