@@ -1527,6 +1527,9 @@ button:active:not(:disabled), .nav-item:active, .nav-item-plus:active, .category
   color: #fff;
   width: 56px;
   height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;

@@ -34,6 +34,7 @@ const groupTransactionsByDay = (txList) => {
 function TransactionItem({ tx, formatAmount, onDelete, t }) {
   const conf = getCategoryConfig(tx.category);
   const Icon = conf.icon;
+  const txTime = new Date(tx.date).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}>
@@ -56,10 +57,12 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
           <p style={{ 
             fontSize: '14px', 
             fontWeight: '700', 
-            color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)' 
+            color: tx.type === 'income' ? 'var(--income-color)' : 'var(--expense-color)',
+            marginBottom: '2px'
           }}>
             {tx.type === 'income' ? '+' : '-'}{formatAmount(tx.amount)}
           </p>
+          <p style={{ fontSize: '10px', color: 'var(--hint-color)' }}>{txTime}</p>
         </div>
         <button 
           onClick={() => onDelete(tx.id)} 
