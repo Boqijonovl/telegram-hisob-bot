@@ -19,7 +19,6 @@ import {
   Download,
   Loader
 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
 
 // Categories Configuration
 export const getCategoryConfig = (categoryName) => {
@@ -158,7 +157,6 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   const [activeTab, setActiveTab] = useState('kategoriya'); // 'kategoriya' or 'tranzaksiya'
   const [activeCategory, setActiveCategory] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const pdfRef = useRef(null);
 
   // Group transactions for "Tranzaksiya" tab
   const groupedDays = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
@@ -171,46 +169,33 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   }, [transactions]);
   const progressPercent = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : (stats.totalExpense > 0 ? 100 : 0);
 
-  const handleExportPDF = async () => {
+  const handleExportWord = async () => {
     try {
       setIsExporting(true);
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
       
-      const element = pdfRef.current;
-      const opt = {
-        margin:       10,
-        filename:     'Hisobot.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      // Generate base64 PDF
-      const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
-      
       // Send to backend to forward to Telegram Bot
-      const res = await fetch(`${API_URL}/api/send-pdf`, {
+      const res = await fetch(`${API_URL}/api/send-word`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-telegram-user-id': String(tgUser.id)
-        },
-        body: JSON.stringify({ pdfBase64, filename: `Hisobot_${new Date().toISOString().substring(0,10)}.pdf` })
+        }
       });
 
-      if (!res.ok) throw new Error('Failed to send PDF');
+      if (!res.ok) throw new Error('Failed to send Word report');
       
-      showToast(t.toastSaved || 'PDF telegram bot orqali yuborildi!', 'success');
+      showToast(t.toastSaved || 'Word hisobot telegram bot orqali yuborildi!', 'success');
     } catch (error) {
-      console.error('PDF Export Error:', error);
-      showToast(t.toastError || 'PDF yuborishda xatolik', 'error');
+      console.error('Word Export Error:', error);
+      showToast(t.toastError || 'Hisobot yuborishda xatolik', 'error');
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div style={{ paddingBottom: '30px' }} ref={pdfRef}>
+    <div style={{ paddingBottom: '30px' }}>
       {/* Top Balance Card */}
       <div className="balance-card glass-panel" style={{
         padding: '20px',
@@ -393,9 +378,9 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
         </div>
       )}
 
-      {/* PDF Export Button */}
+      {/* Word Export Button */}
       <button 
-        onClick={handleExportPDF}
+        onClick={handleExportWord}
         disabled={isExporting}
         style={{
           width: '100%',
@@ -416,7 +401,7 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
         }}
       >
         {isExporting ? <Loader size={18} className="spin-animation" /> : <Download size={18} />}
-        {t.downloadPdf}
+        {t.downloadWord || "Word hisobot (Telegramga)"}
       </button>
     </div>
   );

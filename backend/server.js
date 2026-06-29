@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { db } from './db.js';
-import { initBot, sendBudgetAlert, broadcastMessage } from './bot.js';
+import { initBot, bot, sendBudgetAlert, broadcastMessage } from './bot.js';
+import { generateWordReport } from './reportGenerator.js';
 
 dotenv.config();
 
@@ -378,31 +379,35 @@ app.get('/api/rates', async (req, res) => {
   }
 });
 
-// Send PDF report via Telegram Bot
-app.post('/api/send-pdf', async (req, res) => {
+// Generate and send Word report via Telegram Bot
+app.post('/api/send-word', async (req, res) => {
   try {
     const userId = getUserId(req);
-    const { pdfBase64, filename } = req.body;
     
-    if (!pdfBase64) {
-      return res.status(400).json({ error: 'Missing PDF data' });
+    // Fetch transactions and settings
+    const { data: transactions } = await db.getTransactions(userId);
+    const settings = await db.getSettings(userId);
+    
+    if (!transactions || transactions.length === 0) {
+      return res.status(400).json({ error: 'No transactions found' });
     }
 
-    // Convert base64 to buffer
-    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
-    const pdfBuffer = Buffer.from(base64Data, 'base64');
+    const sortedTx = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const startDate = new Date(sortedTx[0].date).toLocaleDateString('uz-UZ');
+    const endDate = new Date(sortedTx[sortedTx.length - 1].date).toLocaleDateString('uz-UZ');
     
-    const fileOptions = {
-      filename: filename || 'Hisobot.pdf',
-      contentType: 'application/pdf',
-    };
-
-    await bot.sendDocument(userId, pdfBuffer, {}, fileOptions);
+    const buffer = await generateWordReport(sortedTx, settings, `${startDate} - ${endDate}`, settings.currency);
+    
+    await bot.telegram.sendDocument(
+      userId,
+      { source: buffer, filename: `Hisobot_${new Date().toISOString().substring(0,10)}.docx` },
+      { caption: `📊 Sizning barcha tranzaksiyalaringiz Word hisoboti.\nDavr: ${startDate} - ${endDate}` }
+    );
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Error sending PDF via bot:', error);
-    res.status(500).json({ error: 'Failed to send PDF' });
+    console.error('Error sending Word report via bot:', error);
+    res.status(500).json({ error: 'Failed to send Word report' });
   }
 });
 

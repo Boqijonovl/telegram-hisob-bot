@@ -4,7 +4,7 @@ import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
 import axios from 'axios';
 import cron from 'node-cron';
-import * as XLSX from 'xlsx';
+import { generateWordReport } from './reportGenerator.js';
 
 dotenv.config();
 
@@ -313,69 +313,12 @@ This project is the ultimate modern tool to help you fully control your financia
       const startDate = new Date(sortedTx[0].date).toLocaleDateString('uz-UZ');
       const endDate = new Date(sortedTx[sortedTx.length - 1].date).toLocaleDateString('uz-UZ');
       
-      let totalIncome = 0;
-      let totalExpense = 0;
-
-      const excelData = sortedTx.map(tx => {
-        const amount = parseFloat(tx.amount);
-        if (tx.type === 'income') totalIncome += amount;
-        else totalExpense += amount;
-        
-        return {
-          "Sana": new Date(tx.date).toLocaleString('uz-UZ'),
-          "Turi": tx.type === 'income' ? 'Daromad' : 'Harajat',
-          "Kategoriya": tx.category,
-          "Summa": amount,
-          "Izoh": tx.description || ''
-        };
-      });
-
-      // Add empty row
-      excelData.push({ "Sana": "", "Turi": "", "Kategoriya": "", "Summa": "", "Izoh": "" });
-      
-      // Add totals
-      excelData.push({
-        "Sana": `Davr: ${startDate} dan ${endDate} gacha`,
-        "Turi": "",
-        "Kategoriya": "Jami Daromad:",
-        "Summa": totalIncome,
-        "Izoh": ""
-      });
-      excelData.push({
-        "Sana": "",
-        "Turi": "",
-        "Kategoriya": "Jami Harajat:",
-        "Summa": totalExpense,
-        "Izoh": ""
-      });
-      excelData.push({
-        "Sana": "",
-        "Turi": "",
-        "Kategoriya": "Sof Qoldiq:",
-        "Summa": totalIncome - totalExpense,
-        "Izoh": ""
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      
-      // Auto-size columns slightly
-      const wscols = [
-        {wch: 20}, // Sana
-        {wch: 10}, // Turi
-        {wch: 20}, // Kategoriya
-        {wch: 15}, // Summa
-        {wch: 30}  // Izoh
-      ];
-      worksheet['!cols'] = wscols;
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Hisobot");
-
-      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      // Generate Word Document
+      const buffer = await generateWordReport(sortedTx, settings, `${startDate} dan ${endDate} gacha`);
 
       await ctx.replyWithDocument(
-        { source: buffer, filename: `hisobot_${userId}.xlsx` },
-        { caption: `📊 Sizning barcha tranzaksiyalaringiz Excel hisoboti.\nDavr: ${startDate} - ${endDate}` }
+        { source: buffer, filename: `hisobot_${userId}.docx` },
+        { caption: `📊 Sizning barcha tranzaksiyalaringiz Word hisoboti.\nDavr: ${startDate} - ${endDate}` }
       );
     } catch (error) {
       console.error('Backup creation error:', error);
@@ -778,7 +721,90 @@ export function initCronJobs() {
         }
       }
     } catch (error) {
-      console.error('Error in cron job execution:', error);
+      console.error('Error in daily cron job execution:', error);
+    }
+  });
+
+  // Weekly Word Report (Monday 08:00 AM)
+  cron.schedule('0 8 * * 1', async () => {
+    if (!bot) return;
+    try {
+      console.log('⏰ Running weekly word report cron job...');
+      const users = await db.getAllUserSettings();
+      for (const user of users) {
+        if (user.user_id === '123456') continue;
+        try {
+          const { data: transactions } = await db.getTransactions(user.user_id);
+          if (!transactions || transactions.length === 0) continue;
+
+          // Filter for last 7 days
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+          
+          const weeklyTx = transactions.filter(tx => new Date(tx.date) >= oneWeekAgo);
+          if (weeklyTx.length === 0) continue;
+
+          const startDate = oneWeekAgo.toLocaleDateString('uz-UZ');
+          const endDate = new Date().toLocaleDateString('uz-UZ');
+          
+          const buffer = await generateWordReport(weeklyTx, null, `${startDate} - ${endDate}`);
+          
+          await bot.telegram.sendDocument(
+            user.user_id,
+            { source: buffer, filename: `Haftalik_Hisobot_${endDate}.docx` },
+            { caption: `📊 Sizning haftalik moliyaviy hisobotingiz (Word formati).\nDavr: ${startDate} - ${endDate}` }
+          );
+        } catch (e) {
+          console.error(`Error generating weekly report for ${user.user_id}:`, e);
+        }
+      }
+    } catch (error) {
+      console.error('Error in weekly cron job execution:', error);
+    }
+  });
+
+  // Monthly Word Report (1st day of the month at 08:00 AM)
+  cron.schedule('0 8 1 * *', async () => {
+    if (!bot) return;
+    try {
+      console.log('⏰ Running monthly word report cron job...');
+      const users = await db.getAllUserSettings();
+      for (const user of users) {
+        if (user.user_id === '123456') continue;
+        try {
+          const { data: transactions } = await db.getTransactions(user.user_id);
+          if (!transactions || transactions.length === 0) continue;
+
+          // Filter for last month
+          const firstDayOfCurrentMonth = new Date();
+          firstDayOfCurrentMonth.setDate(1);
+          firstDayOfCurrentMonth.setHours(0,0,0,0);
+
+          const firstDayOfLastMonth = new Date(firstDayOfCurrentMonth);
+          firstDayOfLastMonth.setMonth(firstDayOfLastMonth.getMonth() - 1);
+
+          const monthlyTx = transactions.filter(tx => {
+            const d = new Date(tx.date);
+            return d >= firstDayOfLastMonth && d < firstDayOfCurrentMonth;
+          });
+          
+          if (monthlyTx.length === 0) continue;
+
+          const periodName = `${firstDayOfLastMonth.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })} oyi uchun`;
+          
+          const buffer = await generateWordReport(monthlyTx, null, periodName);
+          
+          await bot.telegram.sendDocument(
+            user.user_id,
+            { source: buffer, filename: `Oylik_Hisobot_${firstDayOfLastMonth.getMonth()+1}.docx` },
+            { caption: `📊 Sizning ${periodName} moliyaviy hisobotingiz (Word formati).` }
+          );
+        } catch (e) {
+          console.error(`Error generating monthly report for ${user.user_id}:`, e);
+        }
+      }
+    } catch (error) {
+      console.error('Error in monthly cron job execution:', error);
     }
   });
 }
