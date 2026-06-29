@@ -199,19 +199,98 @@ Hisob-kitob botiga xush kelibsiz!
     );
   });
 
-  // Help command
+  // Help command with language selection
   bot.help((ctx) => {
-    const message = `📋 *Botdan foydalanish bo'yicha yordam:*
-
-1️⃣ *Mini App:* 'Hisobni Ochish' tugmasi yordamida chiroyli diagrammalar va hisobotlarni ko'ring.
-2️⃣ *Matn va Ovoz formatlari:*
-   • Ovozli xabarni yuboring: *"Taksi ellik ming so'm uyga"*
-   • Matnli xabarni yuboring: \`50000 taksi\`
-3️⃣ *Cheklarni skanerlash:*
-   • Chek rasmini (photo) to'g'ridan-to'g'ri botga yuboring. Matn skanerlanib, summasi harajatga yoziladi.
-4️⃣ *Zaxira:* Ma'lumotlarni yuklash uchun /backup buyrug'ini yuboring.`;
+    const message = `Qaysi tilda yordam kerak? 🌐\nНа каком языке нужна помощь?\nIn which language do you need help?`;
     
-    ctx.replyWithMarkdownV2(escapeMarkdown(message));
+    const inlineButton = Markup.inlineKeyboard([
+      [
+        Markup.button.callback('🇺🇿 O\'zbekcha', 'help_uz'),
+        Markup.button.callback('🇷🇺 Русский', 'help_ru'),
+        Markup.button.callback('🇬🇧 English', 'help_en')
+      ]
+    ]);
+    
+    ctx.reply(message, inlineButton);
+  });
+
+  // Help actions for each language
+  bot.action('help_uz', async (ctx) => {
+    try { await ctx.answerCbQuery(); } catch (e) {}
+    const text = `🤖 *Hisob-kitob Boti Yordamnomasi*
+
+Bu loyiha sizning moliyaviy holatingizni to'liq nazorat qilish uchun yordam beruvchi eng zamonaviy vositadir.
+
+*Asosiy Imkoniyatlar (Mini App):*
+📊 *Dashboard & Statistika:* Barcha daromad va harajatlaringizni chiroyli grafiklarda ko'rish.
+💳 *Xazna (Vault):* Alohida jamg'arma hisobini yuritish.
+🔄 *Doimiy To'lovlar:* Internet, Netflix yoki kommunal to'lovlaringizni kiritib qo'ysangiz, bot sizga 1 kun oldin eslatadi.
+🤝 *Umumiy Hisob (Shared):* Oilangiz yoki sherigingiz bilan bitta hisobni birga ishlatish.
+💵 *Qarz Daftari:* Kimdan qarz oldingiz, kimga berdingiz — barchasini eslatma bilan yozib borish.
+📥 *Eksport:* Hisobotlarni PDF, CSV yoki JSON formatida yuklab olish imkoni.
+🧠 *AI Maslahatlar:* Sun'iy intellekt sizning xarajatlaringizni tahlil qilib maslahat beradi.
+
+*Bot orqali tezkor yozish usullari:*
+✍️ *Matn orqali:* \`50000 taksi\` yoki \`+1500000 oylik\` deb yozish kifoya.
+🎙 *Ovozli yozish:* Ovozli xabar yuborib kiritishingiz ham mumkin! (Masalan: *"Taksi yigirma ming so'm"*)
+📸 *Chek Skaner:* Xarid qilingan chek rasmini botga yuboring, AI uni avtomat o'qiydi va bazaga qo'shadi!
+
+/start - Botni qayta ishga tushirish
+/backup - Barcha ma'lumotlarni JSON qilib yuklab olish
+`;
+    ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Mini App-ni ochish 📱', webAppUrl)]]).reply_markup });
+  });
+
+  bot.action('help_ru', async (ctx) => {
+    try { await ctx.answerCbQuery(); } catch (e) {}
+    const text = `🤖 *Руководство по боту*
+
+Этот проект - самый современный инструмент для полного контроля за вашими финансами.
+
+*Основные функции (Mini App):*
+📊 *Дашборд и Статистика:* Красивые графики ваших доходов и расходов.
+💳 *Сейф (Vault):* Ведение отдельного сберегательного счета.
+🔄 *Регулярные платежи:* Добавьте свои счета за Интернет или Netflix, и бот напомнит вам за 1 день до оплаты.
+🤝 *Общий счет:* Используйте один счет вместе с семьей или партнером.
+💵 *Долговая книга:* Учет долгов с автоматическими напоминаниями.
+📥 *Экспорт:* Выгрузка отчетов в PDF, CSV или JSON.
+🧠 *ИИ Советы:* Искусственный интеллект анализирует ваши расходы и дает советы.
+
+*Быстрый ввод через бота:*
+✍️ *Текстом:* Просто напишите \`50000 такси\` или \`+1500000 зарплата\`.
+🎙 *Голосом:* Отправьте голосовое сообщение! (Например: *"Такси двадцать тысяч"*)
+📸 *Скан чека:* Отправьте фото чека, ИИ автоматически распознает его и добавит в базу!
+
+/start - Перезапустить бота
+/backup - Скачать все данные в JSON
+`;
+    ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Открыть Mini App 📱', webAppUrl)]]).reply_markup });
+  });
+
+  bot.action('help_en', async (ctx) => {
+    try { await ctx.answerCbQuery(); } catch (e) {}
+    const text = `🤖 *Bot User Guide*
+
+This project is the ultimate modern tool to help you fully control your financial life.
+
+*Main Features (Mini App):*
+📊 *Dashboard & Analytics:* View all your income and expenses in beautiful charts.
+💳 *Vault:* Manage a separate savings account.
+🔄 *Recurring Payments:* Add your Internet or Netflix bills, and the bot will remind you 1 day before.
+🤝 *Shared Account:* Share a single account with your family or partner.
+💵 *Debt Tracker:* Track who owes you and who you owe, with reminders.
+📥 *Exporting:* Download reports in PDF, CSV, or JSON format.
+🧠 *AI Insights:* Artificial Intelligence analyzes your spending and provides advice.
+
+*Quick Input via Bot:*
+✍️ *By Text:* Just type \`50000 taxi\` or \`+1500000 salary\`.
+🎙 *By Voice:* Send a voice message! (e.g. *"Taxi twenty thousand"*)
+📸 *Receipt Scanner:* Send a photo of a receipt, the AI will automatically read it and add it to your database!
+
+/start - Restart the bot
+/backup - Download all data as JSON
+`;
+    ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Open Mini App 📱', webAppUrl)]]).reply_markup });
   });
 
   // Backup command

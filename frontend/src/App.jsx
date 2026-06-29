@@ -621,15 +621,15 @@ function App() {
 
       {/* Page Content Rendering */}
       {!introFinished ? (
-        <div className="loader-container video-loader-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)' }}>
+        <div className="loader-container video-loader-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)', paddingBottom: '15vh' }}>
           <video 
-            src="/Spend1.mp4" 
+            src="/Spend.MP4" 
             autoPlay 
             muted 
             playsInline
             onEnded={() => setIntroFinished(true)}
             onError={() => setIntroFinished(true)}
-            style={{ width: '240px', height: '240px', objectFit: 'contain', borderRadius: '24px' }}
+            style={{ width: '100%', maxWidth: '380px', height: 'auto', objectFit: 'contain', borderRadius: '16px' }}
           />
         </div>
       ) : loading && transactions.length === 0 ? (

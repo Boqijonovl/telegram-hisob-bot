@@ -106,7 +106,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#8b5cf6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <Wallet size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Xazna (Vault)</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.vault}</div>
           <div style={{ fontSize: '15px', color: 'var(--hint-color)', marginRight: '8px' }}>{formatAmount(vaultBalance)}</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
@@ -115,7 +115,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ec4899', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <CalendarClock size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Doimiy to'lovlar</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.subscriptions}</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
 
@@ -123,7 +123,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <History size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Barcha operatsiyalar</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.allTransactions}</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
       </div>
@@ -135,7 +135,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f59e0b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <Layers size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Kategoriyalar</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.categoriesMenu}</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
 
@@ -143,7 +143,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <Link size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Umumiy Hisob</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.sharedAccount}</div>
           <div style={{ fontSize: '14px', color: settings?.my_linked_to ? 'var(--income-color)' : 'var(--hint-color)', marginRight: '8px' }}>
             {settings?.my_linked_to ? 'Ulangan' : 'Ulanmagan'}
           </div>
@@ -154,7 +154,7 @@ function Profile({
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ec4899', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
             <Settings size={18} />
           </div>
-          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Umumiy sozlamalar</div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>{t.settings}</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
       </div>
@@ -180,7 +180,7 @@ function Profile({
           boxSizing: 'border-box', overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700' }}>Umumiy sozlamalar</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '700' }}>{t.settings}</h2>
             <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', color: 'var(--text-color)' }}>
               <X size={24} />
             </button>
@@ -189,7 +189,7 @@ function Profile({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Mavzu */}
             <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', display: 'block' }}>Ilova mavzusi (Theme):</label>
+              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', display: 'block' }}>{t.appTheme}:</label>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button 
                   onClick={() => toggleTheme('light')} 
@@ -199,7 +199,7 @@ function Profile({
                     color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  <Sun size={18} /> Yorug'
+                  <Sun size={18} /> {t.themeLight}
                 </button>
                 <button 
                   onClick={() => toggleTheme('dark')} 
@@ -209,7 +209,7 @@ function Profile({
                     color: 'var(--text-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  <Moon size={18} /> Qorong'i
+                  <Moon size={18} /> {t.themeDark}
                 </button>
               </div>
             </div>
