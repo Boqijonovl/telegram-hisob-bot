@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle, TableLayoutType } from 'docx';
 
 export async function generateWordReport(transactions, stats, periodName, currency = 'UZS') {
   // Sorting transactions by date descending
@@ -28,32 +28,27 @@ export async function generateWordReport(transactions, stats, periodName, curren
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Sana", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
           shading: headerShading,
-          margins: cellMargin,
-          width: { size: 20, type: WidthType.PERCENTAGE }
+          margins: cellMargin
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Turi", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
           shading: headerShading,
-          margins: cellMargin,
-          width: { size: 15, type: WidthType.PERCENTAGE }
+          margins: cellMargin
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Kategoriya", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
           shading: headerShading,
-          margins: cellMargin,
-          width: { size: 20, type: WidthType.PERCENTAGE }
+          margins: cellMargin
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: `Summa (${currency})`, bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
           shading: headerShading,
-          margins: cellMargin,
-          width: { size: 20, type: WidthType.PERCENTAGE }
+          margins: cellMargin
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Izoh", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
           shading: headerShading,
-          margins: cellMargin,
-          width: { size: 25, type: WidthType.PERCENTAGE }
+          margins: cellMargin
         }),
       ],
     })
@@ -73,11 +68,11 @@ export async function generateWordReport(transactions, stats, periodName, curren
     tableRows.push(
       new TableRow({
         children: [
-          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: dateStr, alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: typeStr, color: amountColor, bold: true })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: tx.category, alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: amountStr, color: amountColor, bold: true })], alignment: AlignmentType.RIGHT })] }),
-          new TableCell({ margins: cellMargin, width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: tx.description || '-', alignment: AlignmentType.LEFT })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: dateStr, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: typeStr, color: amountColor, bold: true })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.category, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: amountStr, color: amountColor, bold: true })], alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.description || '-', alignment: AlignmentType.LEFT })] }),
         ],
       })
     );
@@ -141,6 +136,8 @@ export async function generateWordReport(transactions, stats, periodName, curren
           new Table({
             rows: tableRows,
             width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [1800, 1500, 2200, 2000, 2500],
             borders: tableBorders
           }),
           new Paragraph({
