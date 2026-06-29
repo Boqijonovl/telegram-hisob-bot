@@ -31,6 +31,48 @@
   --transition-normal: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+[data-theme='light'] {
+  --bg-color: #f1f5f9 !important;
+  --text-color: #0f172a !important;
+  --hint-color: #64748b !important;
+  --link-color: #8b5cf6 !important;
+  
+  --button-color: #8b5cf6 !important;
+  --button-text-color: #ffffff !important;
+  
+  --secondary-bg-color: #ffffff !important;
+  
+  --income-color: #059669 !important;
+  --income-bg: rgba(16, 185, 129, 0.1) !important;
+  --expense-color: #e11d48 !important;
+  --expense-bg: rgba(225, 29, 72, 0.1) !important;
+  
+  --card-bg: rgba(255, 255, 255, 0.95) !important;
+  --card-border: rgba(0, 0, 0, 0.05) !important;
+  --glow-color: rgba(139, 92, 246, 0.1) !important;
+}
+
+[data-theme='dark'] {
+  --bg-color: #050810 !important;
+  --text-color: #f8fafc !important;
+  --hint-color: #94a3b8 !important;
+  --link-color: #a855f7 !important;
+  
+  --button-color: #8b5cf6 !important;
+  --button-text-color: #ffffff !important;
+  
+  --secondary-bg-color: rgba(22, 28, 45, 0.45) !important;
+  
+  --income-color: #10b981 !important;
+  --income-bg: rgba(16, 185, 129, 0.15) !important;
+  --expense-color: #f43f5e !important;
+  --expense-bg: rgba(244, 63, 94, 0.15) !important;
+  
+  --card-bg: rgba(22, 28, 45, 0.5) !important;
+  --card-border: rgba(255, 255, 255, 0.05) !important;
+  --glow-color: rgba(139, 92, 246, 0.25) !important;
+}
+
 .glass-panel {
   background: var(--secondary-bg-color);
   backdrop-filter: blur(20px);
