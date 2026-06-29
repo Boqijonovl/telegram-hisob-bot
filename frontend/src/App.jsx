@@ -24,10 +24,12 @@ const Analytics = lazy(() => import('./components/Analytics'));
 const AddTransaction = lazy(() => import('./components/AddTransaction'));
 const Profile = lazy(() => import('./components/Profile'));
 const VaultModal = lazy(() => import('./components/VaultModal'));
+import SkeletonLoader from './components/SkeletonLoader';
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const History = lazy(() => import('./components/History'));
 const CategoryManager = lazy(() => import('./components/CategoryManager'));
 const Debts = lazy(() => import('./components/Debts'));
+const Subscriptions = lazy(() => import('./components/Subscriptions'));
 
 // Dynamically compute API URL based on frontend host
 const getApiUrl = () => {
@@ -42,6 +44,7 @@ const API_URL = getApiUrl();
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'profile', 'add-transaction', 'history', 'admin'
+  const [introFinished, setIntroFinished] = useState(false);
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState({
@@ -617,10 +620,27 @@ function App() {
       </header>
 
       {/* Page Content Rendering */}
-      {loading && transactions.length === 0 ? (
-        <div className="loader-container">
-          <div className="spinner"></div>
-          <p>{t.loading}</p>
+      {!introFinished ? (
+        <div className="video-intro-container" onClick={() => setIntroFinished(true)}>
+          <video 
+            src="/Spend.MP4" 
+            autoPlay 
+            muted 
+            playsInline
+            onEnded={() => setIntroFinished(true)}
+            onError={() => setIntroFinished(true)}
+            style={{ width: '100%', height: '100vh', objectFit: 'cover' }}
+          />
+          <button 
+            onClick={() => setIntroFinished(true)}
+            style={{ position: 'absolute', bottom: '40px', right: '20px', padding: '8px 16px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '20px', zIndex: 10 }}
+          >
+            {t.skip || 'O\'tkazish'}
+          </button>
+        </div>
+      ) : loading && transactions.length === 0 ? (
+        <div className="loader-container" style={{ padding: '20px' }}>
+          <SkeletonLoader />
         </div>
       ) : (
         <Suspense fallback={<div className="loader-container"><div className="spinner"></div></div>}>
@@ -662,6 +682,16 @@ function App() {
               tgUser={tgUser}
               apiUrl={API_URL}
               t={t}
+              formatAmount={formatAmount}
+            />
+          )}
+
+          {activeTab === 'subscriptions' && (
+            <Subscriptions 
+              tgUser={tgUser}
+              apiUrl={API_URL}
+              t={t}
+              setActiveTab={setActiveTab}
               formatAmount={formatAmount}
             />
           )}

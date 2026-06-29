@@ -673,6 +673,24 @@ export function initCronJobs() {
             
             await bot.telegram.sendMessage(user.user_id, message, { parse_mode: 'MarkdownV2' });
           }
+          // Subscriptions (Recurring) logic
+          try {
+            const subs = await db.getRecurringTransactions(user.user_id);
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowDay = tomorrow.getDate().toString();
+            
+            const dueSubs = subs.filter(s => s.cron_expression === tomorrowDay);
+            
+            for (const sub of dueSubs) {
+              const formattedAmount = new Intl.NumberFormat('uz-UZ').format(sub.amount);
+              const message = `🔔 *Eslatma\\! \\(Doimiy to'lov\\)*\n\nErtaga *${escapeMarkdown(sub.category)}* uchun *${escapeMarkdown(formattedAmount)}* so'm to'lashingiz kerak\\!`;
+              await bot.telegram.sendMessage(user.user_id, message, { parse_mode: 'MarkdownV2' });
+            }
+          } catch (e) {
+            console.error(`Error processing subscriptions for user ${user.user_id}:`, e);
+          }
+
         } catch (e) {
           console.error(`Error processing debts for user ${user.user_id}:`, e);
         }

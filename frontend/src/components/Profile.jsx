@@ -13,7 +13,8 @@ import {
   Copy,
   ChevronRight,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  CalendarClock
 } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 
@@ -107,6 +108,14 @@ function Profile({
           </div>
           <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Xazna (Vault)</div>
           <div style={{ fontSize: '15px', color: 'var(--hint-color)', marginRight: '8px' }}>{formatAmount(vaultBalance)}</div>
+          <ChevronRight size={18} color="var(--hint-color)" />
+        </div>
+
+        <div onClick={() => setActiveTab('subscriptions')} style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--card-border)', cursor: 'pointer' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ec4899', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+            <CalendarClock size={18} />
+          </div>
+          <div style={{ flex: 1, fontSize: '15px', fontWeight: '600' }}>Doimiy to'lovlar</div>
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
 
