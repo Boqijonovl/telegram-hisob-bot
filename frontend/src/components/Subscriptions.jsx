@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarClock, Plus, Trash2, ChevronLeft, Calendar } from 'lucide-react';
 
-const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount }) => {
+const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount, showToast }) => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -55,9 +55,13 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount }) => {
         setFormData({ name: '', amount: '', day: '1' });
         setShowAddForm(false);
         fetchSubscriptions();
+        if (showToast) showToast('Obuna muvaffaqiyatli qo\'shildi!', 'success');
+      } else {
+        if (showToast) showToast('Xatolik yuz berdi', 'error');
       }
     } catch (error) {
       console.error('Error adding subscription:', error);
+      if (showToast) showToast('Xatolik yuz berdi', 'error');
     }
   };
 
@@ -71,9 +75,13 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount }) => {
       });
       if (res.ok) {
         fetchSubscriptions();
+        if (showToast) showToast('Obuna o\'chirildi', 'success');
+      } else {
+        if (showToast) showToast('O\'chirishda xatolik yuz berdi', 'error');
       }
     } catch (error) {
       console.error('Error deleting subscription:', error);
+      if (showToast) showToast('O\'chirishda xatolik yuz berdi', 'error');
     }
   };
 

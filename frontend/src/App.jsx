@@ -687,6 +687,7 @@ function App() {
               t={t}
               setActiveTab={setActiveTab}
               formatAmount={formatAmount}
+              showToast={showToast}
             />
           )}
 

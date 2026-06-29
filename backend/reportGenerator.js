@@ -73,11 +73,11 @@ export async function generateWordReport(transactions, stats, periodName, curren
     tableRows.push(
       new TableRow({
         children: [
-          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: dateStr, alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: typeStr, color: amountColor, bold: true })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.category, alignment: AlignmentType.CENTER })] }),
-          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: amountStr, color: amountColor, bold: true })], alignment: AlignmentType.RIGHT })] }),
-          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.description || '-', alignment: AlignmentType.LEFT })] }),
+          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: dateStr, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: typeStr, color: amountColor, bold: true })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: tx.category, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: amountStr, color: amountColor, bold: true })], alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ margins: cellMargin, width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: tx.description || '-', alignment: AlignmentType.LEFT })] }),
         ],
       })
     );
@@ -87,7 +87,7 @@ export async function generateWordReport(transactions, stats, periodName, curren
     tableRows.push(
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph("Ushbu davrda operatsiyalar yo'q")], columnSpan: 5 })
+          new TableCell({ margins: cellMargin, children: [new Paragraph("Ushbu davrda operatsiyalar yo'q")], columnSpan: 5 })
         ]
       })
     );
