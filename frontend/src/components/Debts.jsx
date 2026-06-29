@@ -18,6 +18,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
   const [personName, setPersonName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [editId, setEditId] = useState(null);
 
   const { data: debts = [], isLoading } = useQuery({
     queryKey: ['debts', tgUser?.id],
@@ -49,6 +50,31 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
       setPersonName('');
       setAmount('');
       setDueDate('');
+      setEditId(null);
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: async (updatedDebt) => {
+      const res = await fetch(`${apiUrl}/api/debts/${editId}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-user-id': tgUser?.id || '123456' 
+        },
+        body: JSON.stringify(updatedDebt)
+      });
+      if (!res.ok) throw new Error('Error updating debt');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['debts']);
+      setShowAddModal(false);
+      setPersonName('');
+      setAmount('');
+      setDueDate('');
+      setEditId(null);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
     }
   });
@@ -89,12 +115,26 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!personName || !amount) return;
-    addMutation.mutate({
+    const debtData = {
       type: debtType,
       person_name: personName,
       amount: parseFloat(amount),
       due_date: dueDate || null
-    });
+    };
+    if (editId) {
+      editMutation.mutate(debtData);
+    } else {
+      addMutation.mutate(debtData);
+    }
+  };
+
+  const handleEdit = (debt) => {
+    setEditId(debt.id);
+    setDebtType(debt.type);
+    setPersonName(debt.person_name);
+    setAmount(debt.amount);
+    setDueDate(debt.due_date ? debt.due_date.split('T')[0] : '');
+    setShowAddModal(true);
   };
 
   const calculateTotal = (type) => {
@@ -112,7 +152,13 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
           <Users size={24} color="var(--button-color)" /> Qarz Daftari
         </h2>
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setEditId(null);
+            setPersonName('');
+            setAmount('');
+            setDueDate('');
+            setShowAddModal(true);
+          }}
           style={{ background: 'var(--button-color)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
         >
           <Plus size={18} /> Qo'shish
@@ -183,6 +229,12 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
                     style={{ background: debt.is_paid ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: debt.is_paid ? '#f59e0b' : '#10b981', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}
                   >
                     {debt.is_paid ? "Qaytarish" : "To'landi"}
+                  </button>
+                  <button 
+                    onClick={() => handleEdit(debt)}
+                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '6px 12px', borderRadius: '8px' }}
+                  >
+                    <Plus size={14} style={{ transform: 'rotate(45deg)' }} /> 
                   </button>
                   <button 
                     onClick={() => deleteMutation.mutate(debt.id)}
