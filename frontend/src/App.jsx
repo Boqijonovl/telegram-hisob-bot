@@ -623,7 +623,7 @@ function App() {
       {!introFinished ? (
         <div className="loader-container video-loader-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)' }}>
           <video 
-            src="/Spend.MP4" 
+            src="/Spend1.mp4" 
             autoPlay 
             muted 
             playsInline
