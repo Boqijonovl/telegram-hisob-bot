@@ -621,7 +621,7 @@ function App() {
 
       {/* Page Content Rendering */}
       {!introFinished ? (
-        <div className="video-intro-container" onClick={() => setIntroFinished(true)}>
+        <div className="loader-container video-loader-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)' }}>
           <video 
             src="/Spend.MP4" 
             autoPlay 
@@ -629,14 +629,8 @@ function App() {
             playsInline
             onEnded={() => setIntroFinished(true)}
             onError={() => setIntroFinished(true)}
-            style={{ width: '100%', height: '100vh', objectFit: 'cover' }}
+            style={{ width: '240px', height: '240px', objectFit: 'contain', borderRadius: '24px' }}
           />
-          <button 
-            onClick={() => setIntroFinished(true)}
-            style={{ position: 'absolute', bottom: '40px', right: '20px', padding: '8px 16px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '20px', zIndex: 10 }}
-          >
-            {t.skip || 'O\'tkazish'}
-          </button>
         </div>
       ) : loading && transactions.length === 0 ? (
         <div className="loader-container" style={{ padding: '20px' }}>
