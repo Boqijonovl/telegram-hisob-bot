@@ -12,7 +12,7 @@ import {
   Edit2
 } from 'lucide-react';
 
-function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
+function Debts({ tgUser, apiUrl, formatAmount, setActiveTab, t }) {
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [debtType, setDebtType] = useState('given'); // 'given' (qarz berdim) or 'taken' (qarz oldim)
