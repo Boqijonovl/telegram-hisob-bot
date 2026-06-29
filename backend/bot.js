@@ -15,7 +15,7 @@ if (!token) {
   console.warn('⚠️ WARNING: BOT_TOKEN is not set in environmental variables! Telegram Bot will not start.');
 }
 
-let bot = null;
+export let bot = null;
 
 // Helper to escape MarkdownV2 characters
 function escapeMarkdown(text) {
