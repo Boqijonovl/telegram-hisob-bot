@@ -242,9 +242,23 @@ app.post('/api/recurring', async (req, res) => {
   }
 });
 
+app.put('/api/recurring/:id', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { category, amount, cron_expression } = req.body;
+    if (!amount || !category) return res.status(400).json({ error: 'Missing fields' });
+    const updated = await db.updateRecurringTransaction(userId, req.params.id, { category, amount, cron_expression });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating recurring:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.delete('/api/recurring/:id', async (req, res) => {
   try {
-    await db.deleteRecurringTransaction(req.params.id);
+    const userId = getUserId(req);
+    await db.deleteRecurringTransaction(userId, req.params.id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting recurring:', error);

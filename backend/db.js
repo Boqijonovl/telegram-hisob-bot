@@ -380,6 +380,17 @@ export const db = {
     return data;
   },
 
+  async updateRecurringTransaction(userId, id, updates) {
+    const resolvedId = await this.resolveUserId(userId);
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .update(updates)
+      .match({ user_id: resolvedId, id })
+      .select().single();
+    if (error) throw error;
+    return data;
+  },
+
   async deleteRecurringTransaction(userId, id) {
     const resolvedId = await this.resolveUserId(userId);
     const { error } = await supabase

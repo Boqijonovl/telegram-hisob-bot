@@ -6,6 +6,7 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount, showToas
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', day: '1' });
+  const [editId, setEditId] = useState(null);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -45,24 +46,40 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount, showToas
         cron_expression: formData.day // Storing the day of the month as cron_expression
       };
 
-      const res = await fetch(`${apiUrl}/api/recurring`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
+      let res;
+      if (editId) {
+        res = await fetch(`${apiUrl}/api/recurring/${editId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(`${apiUrl}/api/recurring`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      }
 
       if (res.ok) {
         setFormData({ name: '', amount: '', day: '1' });
         setShowAddForm(false);
+        setEditId(null);
         fetchSubscriptions();
-        if (showToast) showToast('Obuna muvaffaqiyatli qo\'shildi!', 'success');
+        if (showToast) showToast(editId ? 'Obuna tahrirlandi!' : 'Obuna muvaffaqiyatli qo\'shildi!', 'success');
       } else {
         if (showToast) showToast('Xatolik yuz berdi', 'error');
       }
     } catch (error) {
-      console.error('Error adding subscription:', error);
+      console.error('Error saving subscription:', error);
       if (showToast) showToast('Xatolik yuz berdi', 'error');
     }
+  };
+
+  const handleEdit = (sub) => {
+    setEditId(sub.id);
+    setFormData({ name: sub.category, amount: sub.amount, day: sub.cron_expression });
+    setShowAddForm(true);
   };
 
   const handleDelete = async (id) => {
@@ -111,7 +128,11 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount, showToas
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{t.activeSubs}</h3>
-        <button onClick={() => setShowAddForm(!showAddForm)} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--button-color)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600' }}>
+        <button onClick={() => {
+          setEditId(null);
+          setFormData({ name: '', amount: '', day: '1' });
+          setShowAddForm(!showAddForm);
+        }} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--button-color)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600' }}>
           <Plus size={16} /> {t.addBtn}
         </button>
       </div>
@@ -155,9 +176,14 @@ const Subscriptions = ({ tgUser, apiUrl, t, setActiveTab, formatAmount, showToas
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <span style={{ fontSize: '15px', fontWeight: '700' }}>{formatAmount(sub.amount)}</span>
-                <button onClick={() => handleDelete(sub.id)} style={{ background: 'rgba(244, 63, 94, 0.1)', color: 'var(--expense-color)', border: 'none', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Trash2 size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleEdit(sub)} style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <CalendarClock size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(sub.id)} style={{ background: 'rgba(244, 63, 94, 0.1)', color: 'var(--expense-color)', border: 'none', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
