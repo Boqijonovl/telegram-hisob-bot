@@ -170,14 +170,11 @@ export function initBot() {
     
     const message = `👋 *Assalomu alaykum, ${firstName}!*
 
-Hisob-kitob botiga xush kelibsiz!
+Sizning moliyaviy holatingizni to'liq nazorat qiluvchi *Hisob-kitob botiga* xush kelibsiz! Bu loyiha orqali o'z daromad va harajatlaringizni osongina hisob-kitob qilishingiz mumkin.
 
-📊 *Mini App:* Pastdagi *'Hisobni Ochish 📊'* tugmasini bosing.
-✍️ *Matn orqali:* \`50000 taksi\` yoki \`+150000 maosh\`
-🎙 *Ovozli yozish:* Ovozli xabar yuborib kiritishingiz ham mumkin! (Masalan: *"Taksi yigirma ming so'm"*)
-📸 *Chek Skaner:* Chek rasmini yuboring, bazaga avtomatik saqlaymiz!
-   
-💾 *Zaxira yuklash:* /backup buyrug'ini bosing.`;
+👇 *Barcha qulayliklarni ko'rish uchun quyidagi 'Hisobni Ochish 📊' tugmasini bosing.*
+
+💡 Qo'llanma va bot haqida to'liq ma'lumot olish uchun /help buyrug'ini bosing!`;
 
     const keyboardButton = Markup.keyboard([
       [Markup.button.webApp('Hisobni Ochish 📊', webAppUrl)]
@@ -237,6 +234,8 @@ Bu loyiha sizning moliyaviy holatingizni to'liq nazorat qilish uchun yordam beru
 
 /start - Botni qayta ishga tushirish
 /backup - Barcha ma'lumotlarni JSON qilib yuklab olish
+
+👨‍💻 *Qo'shimcha savollar va takliflar uchun:* @Boqijonovv
 `;
     ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Mini App-ni ochish 📱', webAppUrl)]]).reply_markup });
   });
@@ -263,6 +262,8 @@ Bu loyiha sizning moliyaviy holatingizni to'liq nazorat qilish uchun yordam beru
 
 /start - Перезапустить бота
 /backup - Скачать все данные в JSON
+
+👨‍💻 *Дополнительные вопросы и предложения:* @Boqijonovv
 `;
     ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Открыть Mini App 📱', webAppUrl)]]).reply_markup });
   });
@@ -289,6 +290,8 @@ This project is the ultimate modern tool to help you fully control your financia
 
 /start - Restart the bot
 /backup - Download all data as JSON
+
+👨‍💻 *For additional questions and feedback:* @Boqijonovv
 `;
     ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Open Mini App 📱', webAppUrl)]]).reply_markup });
   });
