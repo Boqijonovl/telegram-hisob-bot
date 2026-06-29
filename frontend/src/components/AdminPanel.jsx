@@ -35,7 +35,7 @@ function AdminPanel({
   };
 
   const handleMakeAdmin = async (targetUserId) => {
-    if (!window.confirm("Haqiqatan ham bu foydalanuvchini adminga aylantirmoqchimisiz?")) return;
+    if (!window.confirm(t.adminMakeConfirm)) return;
     try {
       const res = await fetch(`${apiUrl}/api/admin/make-admin`, {
         method: 'POST',
@@ -45,8 +45,7 @@ function AdminPanel({
       if (res.ok) {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
         setSelectedUser(null);
-        // ideally refresh adminUsers, but since it's just state we can alert
-        alert("Foydalanuvchi adminga aylantirildi!");
+        alert(t.adminMadeSuccess);
       }
     } catch (e) {
       console.error(e);
@@ -54,7 +53,7 @@ function AdminPanel({
   };
 
   return (
-    <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ paddingBottom: '100px', animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
         <button 
           onClick={() => setActiveTab('profile')}
@@ -154,7 +153,7 @@ function AdminPanel({
         }}>
           <div style={{ background: 'var(--bg-color)', width: '100%', maxWidth: '400px', borderRadius: '24px', padding: '24px', animation: 'fadeIn 0.2s' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Foydalanuvchi Hisoboti</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{t.userReport}</h3>
               <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', color: 'var(--text-color)' }}>
                 <X size={24} />
               </button>
@@ -215,7 +214,7 @@ function AdminPanel({
                 onClick={() => handleMakeAdmin(selectedUser.user_id)}
                 style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', fontWeight: 'bold' }}
               >
-                Super Adminga aylantirish
+                {t.makeAdmin}
               </button>
             )}
           </div>

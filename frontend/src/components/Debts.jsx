@@ -149,9 +149,11 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={24} color="var(--button-color)" /> Qarz Daftari
-        </h2>
+        <div className="section-title-bar">
+          <h3 style={{ fontSize: '20px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={24} color="var(--button-color)" /> {t.debtsNotebook}
+          </h3>
+        </div>
         <button 
           onClick={() => {
             setEditId(null);
@@ -162,7 +164,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
           }}
           style={{ background: 'var(--button-color)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
         >
-          <Plus size={18} /> Qo'shish
+          <Plus size={18} /> {t.add}
         </button>
       </div>
 
@@ -170,7 +172,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
         <div style={{ flex: 1, background: 'rgba(16, 185, 129, 0.1)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
           <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ArrowDownLeft size={14} color="#10b981" /> Olishim kerak
+            <ArrowDownLeft size={14} color="#10b981" /> {t.myReceivables}
           </div>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
             {formatAmount(calculateTotal('given'))}
@@ -178,7 +180,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
         </div>
         <div style={{ flex: 1, background: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
           <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ArrowUpRight size={14} color="#ef4444" /> Berishim kerak
+            <ArrowUpRight size={14} color="#ef4444" /> {t.myPayables}
           </div>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ef4444' }}>
             {formatAmount(calculateTotal('taken'))}
@@ -189,11 +191,11 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {isLoading ? (
-          <div style={{ textAlign: 'center', color: 'var(--hint-color)', padding: '20px' }}>Yuklanmoqda...</div>
+          <div style={{ textAlign: 'center', color: 'var(--hint-color)', padding: '20px' }}>{t.loading}...</div>
         ) : debts.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--hint-color)', padding: '40px 20px', background: 'var(--secondary-bg-color)', borderRadius: '16px' }}>
             <Users size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-            <p>Hali qarzlar yo'q</p>
+            <p>{t.debtsEmpty}</p>
           </div>
         ) : (
           debts.map(debt => (
@@ -210,9 +212,9 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
                     {debt.person_name}
                     {debt.is_paid && <CheckCircle size={14} color="#10b981" />}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {debt.type === 'given' ? 'Siz qarz bergansiz' : 'Siz qarz olgansiz'}
-                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--hint-color)', marginTop: '4px' }}>
+                    {debt.type === 'given' ? t.youGaveDebt : t.youTookDebt}
+                  </p>
                 </div>
                 <div style={{ fontWeight: '700', fontSize: '16px', color: debt.type === 'given' ? '#10b981' : '#ef4444' }}>
                   {debt.type === 'given' ? '+' : '-'}{formatAmount(debt.amount)}
@@ -222,14 +224,14 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--card-border)', paddingTop: '12px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--hint-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={14} /> 
-                  {debt.due_date ? new Date(debt.due_date).toLocaleDateString('uz-UZ') : 'Muddat belgilanmagan'}
+                  {debt.due_date ? new Date(debt.due_date).toLocaleDateString('uz-UZ') : t.noDate}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 
                     onClick={() => togglePaidMutation.mutate({ id: debt.id, is_paid: !debt.is_paid })}
-                    style={{ background: debt.is_paid ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: debt.is_paid ? '#f59e0b' : '#10b981', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}
+                    style={{ background: debt.is_paid ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: debt.is_paid ? '#f59e0b' : '#10b981', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
                   >
-                    {debt.is_paid ? "Qaytarish" : "To'landi"}
+                    {debt.is_paid ? t.returnDebt : t.paidDebt}
                   </button>
                   <button 
                     onClick={() => handleEdit(debt)}
@@ -257,7 +259,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
           background: 'var(--bg-color)', zIndex: 1000, padding: '20px', boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700' }}>Qarz yozish</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '700' }}>{t.addDebt}</h2>
             <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-color)' }}>
               <X size={24} />
             </button>
@@ -272,7 +274,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
                 onClick={() => setDebtType('given')}
                 style={{ background: debtType === 'given' ? '#10b981' : 'transparent', color: debtType === 'given' ? 'white' : 'var(--hint-color)' }}
               >
-                Men berdim
+                {t.iGave}
               </button>
               <button 
                 type="button"
@@ -280,12 +282,12 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
                 onClick={() => setDebtType('taken')}
                 style={{ background: debtType === 'taken' ? '#ef4444' : 'transparent', color: debtType === 'taken' ? 'white' : 'var(--hint-color)' }}
               >
-                Men oldim
+                {t.iTook}
               </button>
             </div>
 
             <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Kim (Ismi):</label>
+              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>{t.whoName}</label>
               <input 
                 type="text" 
                 required
@@ -310,7 +312,7 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
             </div>
 
             <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Qaytarish muddati (ixtiyoriy):</label>
+              <label style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>{t.returnDateOptional}</label>
               <input 
                 type="date" 
                 value={dueDate}
@@ -321,10 +323,10 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
 
             <button 
               type="submit" 
-              disabled={addMutation.isPending}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--button-color)', color: 'white', border: 'none', fontWeight: '700', marginTop: '16px', opacity: addMutation.isPending ? 0.7 : 1 }}
+              disabled={addMutation.isPending || editMutation.isPending}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--button-color)', color: 'white', border: 'none', fontWeight: '700', marginTop: '16px', opacity: (addMutation.isPending || editMutation.isPending) ? 0.7 : 1 }}
             >
-              {addMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+              {addMutation.isPending || editMutation.isPending ? t.loading : t.save}
             </button>
           </form>
         </div>

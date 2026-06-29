@@ -195,7 +195,7 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   };
 
   return (
-    <div style={{ paddingBottom: '30px' }}>
+    <div style={{ paddingBottom: '100px' }}>
       {/* Top Balance Card */}
       <div className="balance-card glass-panel" style={{
         padding: '20px',

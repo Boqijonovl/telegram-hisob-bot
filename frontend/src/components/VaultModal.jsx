@@ -20,8 +20,8 @@ function VaultModal({ onClose, vaultBalance, onSubmit, t, formatAmount }) {
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1050 }}>
-      <div className="modal-content" style={{ padding: '24px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div className="modal-header">
+      <div className="modal-content" style={{ padding: '24px', paddingBottom: '80px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2>{t.vault}</h2>
           <button type="button" onClick={onClose} className="close-btn"><X size={24} /></button>
         </div>

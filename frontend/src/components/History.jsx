@@ -46,11 +46,11 @@ function TransactionItem({ tx, formatAmount, onDelete, t }) {
           <div className="tx-icon" style={{ backgroundColor: conf.bg, color: conf.color }}>
             <Icon size={18} />
           </div>
-          <div className="tx-details">
-            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px', color: 'var(--text-color)' }}>
+          <div className="tx-details" style={{ overflow: 'hidden' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px', color: 'var(--text-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {t.categories[tx.category] || tx.category}
             </h4>
-            <p style={{ fontSize: '11px', color: 'var(--hint-color)' }}>{tx.description || t.categories[tx.category]}</p>
+            <p style={{ fontSize: '11px', color: 'var(--hint-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.description || t.categories[tx.category]}</p>
           </div>
         </div>
         <div className="tx-amount" style={{ textAlign: 'right', marginRight: '8px' }}>
@@ -99,7 +99,7 @@ function History({ transactions, formatAmount, onDelete, t, lang, setActiveTab }
   const groupedDays = useMemo(() => groupTransactionsByDay(transactions.slice(0, visibleCount)), [transactions, visibleCount]);
 
   return (
-    <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ paddingBottom: '100px', animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
         <button 
           onClick={() => setActiveTab('profile')}

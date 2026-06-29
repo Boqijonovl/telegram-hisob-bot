@@ -240,7 +240,7 @@ function Analytics({ stats, currency, formatAmount, t, lang }) {
   const centerCategory = hoveredCategory || (expenseCategories.length > 0 ? expenseCategories[0] : null);
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ paddingBottom: '100px', animation: 'fadeIn 0.3s ease-out' }}>
       <div className="section-title-bar">
         <h3>{t.analytics}</h3>
       </div>

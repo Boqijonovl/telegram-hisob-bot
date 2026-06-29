@@ -72,7 +72,7 @@ function Profile({
   const totalTaken = debtsArray.filter(d => d.type === 'taken').reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
 
   return (
-    <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ paddingBottom: '100px', animation: 'fadeIn 0.3s ease-out' }}>
       
       {/* User Header Info */}
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
@@ -84,18 +84,25 @@ function Profile({
       </div>
 
       {/* Qarzlar Hisoboti */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
-          <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={14} color="var(--expense-color)" /> Sizdagi qarzlar
+      <div style={{ marginBottom: '12px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--text-color)' }}>{t.debtsReport}</h4>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--hint-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={14} color="var(--expense-color)" /> {t.debtsOnYou}
+              </span>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--expense-color)' }}>{formatAmount(totalTaken)}</div>
+            </div>
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--expense-color)' }}>{formatAmount(totalTaken)}</div>
-        </div>
-        <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
-          <div style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingDown size={14} color="var(--income-color)" /> Siz bergan qarz
+          <div style={{ flex: 1, background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '16px', border: '1px solid var(--card-border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--hint-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingDown size={14} color="var(--income-color)" /> {t.debtsYouGave}
+              </span>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--income-color)' }}>{formatAmount(totalGiven)}</div>
+            </div>
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--income-color)' }}>{formatAmount(totalGiven)}</div>
         </div>
       </div>
 

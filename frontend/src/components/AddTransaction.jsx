@@ -113,7 +113,7 @@ function AddTransaction({ onClose, onSubmit, categories, t, tgUser, apiUrl }) {
   const categoriesList = type === 'expense' ? categories.expense : categories.income;
 
   return (
-    <div style={{ paddingBottom: '30px', animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ paddingBottom: '100px', animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', padding: '20px', border: '1px solid var(--card-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>{t.addTransactionTitle}</h3>
