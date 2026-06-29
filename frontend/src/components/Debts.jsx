@@ -8,7 +8,8 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownLeft,
-  X
+  X,
+  Edit2
 } from 'lucide-react';
 
 function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
@@ -232,9 +233,9 @@ function Debts({ tgUser, apiUrl, formatAmount, setActiveTab }) {
                   </button>
                   <button 
                     onClick={() => handleEdit(debt)}
-                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '6px 12px', borderRadius: '8px' }}
+                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}
                   >
-                    <Plus size={14} style={{ transform: 'rotate(45deg)' }} /> 
+                    <Edit2 size={14} />
                   </button>
                   <button 
                     onClick={() => deleteMutation.mutate(debt.id)}
