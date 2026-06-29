@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, HeadingLevel, AlignmentType, WidthType } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle } from 'docx';
 
 export async function generateWordReport(transactions, stats, periodName, currency = 'UZS') {
   // Sorting transactions by date descending
@@ -8,33 +8,51 @@ export async function generateWordReport(transactions, stats, periodName, curren
   let totalIncome = 0;
   let totalExpense = 0;
 
+  const tableBorders = {
+    top: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+    bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+    left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+    right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+    insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+    insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+  };
+
+  const headerShading = { fill: "F3F4F6" };
+  const cellMargin = { top: 100, bottom: 100, left: 100, right: 100 };
+
   const tableRows = [
     // Header Row
     new TableRow({
+      tableHeader: true,
       children: [
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "Sana", bold: true })] })],
-          shading: { fill: "f3f4f6" },
+          children: [new Paragraph({ children: [new TextRun({ text: "Sana", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
+          shading: headerShading,
+          margins: cellMargin,
           width: { size: 20, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "Turi", bold: true })] })],
-          shading: { fill: "f3f4f6" },
+          children: [new Paragraph({ children: [new TextRun({ text: "Turi", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
+          shading: headerShading,
+          margins: cellMargin,
           width: { size: 15, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "Kategoriya", bold: true })] })],
-          shading: { fill: "f3f4f6" },
+          children: [new Paragraph({ children: [new TextRun({ text: "Kategoriya", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
+          shading: headerShading,
+          margins: cellMargin,
           width: { size: 20, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: `Summa (${currency})`, bold: true })] })],
-          shading: { fill: "f3f4f6" },
+          children: [new Paragraph({ children: [new TextRun({ text: `Summa (${currency})`, bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
+          shading: headerShading,
+          margins: cellMargin,
           width: { size: 20, type: WidthType.PERCENTAGE }
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "Izoh", bold: true })] })],
-          shading: { fill: "f3f4f6" },
+          children: [new Paragraph({ children: [new TextRun({ text: "Izoh", bold: true, color: "374151" })], alignment: AlignmentType.CENTER })],
+          shading: headerShading,
+          margins: cellMargin,
           width: { size: 25, type: WidthType.PERCENTAGE }
         }),
       ],
@@ -50,14 +68,16 @@ export async function generateWordReport(transactions, stats, periodName, curren
     const typeStr = tx.type === 'income' ? 'Daromad' : 'Harajat';
     const amountStr = new Intl.NumberFormat('uz-UZ').format(amount);
 
+    const amountColor = tx.type === 'income' ? "10B981" : "EF4444"; // green / red
+
     tableRows.push(
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph(dateStr)] }),
-          new TableCell({ children: [new Paragraph(typeStr)] }),
-          new TableCell({ children: [new Paragraph(tx.category)] }),
-          new TableCell({ children: [new Paragraph(amountStr)] }),
-          new TableCell({ children: [new Paragraph(tx.description || '-')] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: dateStr, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: typeStr, color: amountColor, bold: true })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.category, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ children: [new TextRun({ text: amountStr, color: amountColor, bold: true })], alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ margins: cellMargin, children: [new Paragraph({ text: tx.description || '-', alignment: AlignmentType.LEFT })] }),
         ],
       })
     );
@@ -108,7 +128,8 @@ export async function generateWordReport(transactions, stats, periodName, curren
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: `💰 Sof Qoldiq: ${formattedBalance} ${currency}`, bold: true })
+              new TextRun({ text: `💰 Sof Qoldiq: `, size: 28, bold: true, color: "374151" }),
+              new TextRun({ text: `${formattedBalance} ${currency}`, size: 28, bold: true, color: (totalIncome - totalExpense) >= 0 ? "10B981" : "EF4444" })
             ],
             spacing: { after: 200 },
           }),
@@ -120,6 +141,7 @@ export async function generateWordReport(transactions, stats, periodName, curren
           new Table({
             rows: tableRows,
             width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders
           }),
           new Paragraph({
             text: "\nHisob-kitob Boti orqali avtomatik yaratildi.",

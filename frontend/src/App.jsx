@@ -256,10 +256,10 @@ function App() {
       categoryTotals[tx.category].count += 1;
 
       if (tx.type === 'income') {
-        if (!isXazna) totalIncome += amount;
+        totalIncome += amount;
         categoryTotals[tx.category].income += amount;
       } else {
-        if (!isXazna) totalExpense += amount;
+        totalExpense += amount;
         categoryTotals[tx.category].expense += amount;
       }
     });
@@ -274,7 +274,7 @@ function App() {
       totalExpense,
       budget: settings.budget || 0,
       categories,
-      vaultBalance: categoryTotals['Xazna'] ? (categoryTotals['Xazna'].income - categoryTotals['Xazna'].expense) : 0
+      vaultBalance: categoryTotals['Xazna'] ? (categoryTotals['Xazna'].expense - categoryTotals['Xazna'].income) : 0
     };
   };
 

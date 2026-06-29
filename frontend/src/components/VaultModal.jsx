@@ -19,8 +19,8 @@ function VaultModal({ onClose, vaultBalance, onSubmit, t, formatAmount }) {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ padding: '24px' }}>
+    <div className="modal-overlay" style={{ zIndex: 1050 }}>
+      <div className="modal-content" style={{ padding: '24px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2>{t.vault}</h2>
           <button type="button" onClick={onClose} className="close-btn"><X size={24} /></button>
