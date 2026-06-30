@@ -757,15 +757,26 @@ export function initCronJobs() {
           // Subscriptions (Recurring) logic
           try {
             const subs = await db.getRecurringTransactions(user.user_id);
+            const todayDate = new Date();
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const todayDay = todayDate.getDate().toString();
             const tomorrowDay = tomorrow.getDate().toString();
             
-            const dueSubs = subs.filter(s => s.cron_expression === tomorrowDay);
-            
-            for (const sub of dueSubs) {
+            // Due tomorrow
+            const dueSubsTomorrow = subs.filter(s => s.cron_expression === tomorrowDay);
+            for (const sub of dueSubsTomorrow) {
               const formattedAmount = new Intl.NumberFormat('uz-UZ').format(sub.amount);
               const message = `🔔 *Eslatma\\! \\(Doimiy to'lov\\)*\n\nErtaga *${escapeMarkdown(sub.category)}* uchun *${escapeMarkdown(formattedAmount)}* so'm to'lashingiz kerak\\!`;
+              await bot.telegram.sendMessage(user.user_id, message, { parse_mode: 'MarkdownV2' });
+            }
+            
+            // Due today
+            const dueSubsToday = subs.filter(s => s.cron_expression === todayDay);
+            for (const sub of dueSubsToday) {
+              const formattedAmount = new Intl.NumberFormat('uz-UZ').format(sub.amount);
+              const message = `🔴 *Bugun to'lov kuni\\! \\(Doimiy to'lov\\)*\n\nBugun *${escapeMarkdown(sub.category)}* uchun *${escapeMarkdown(formattedAmount)}* so'm to'lashingiz kerak\\!`;
               await bot.telegram.sendMessage(user.user_id, message, { parse_mode: 'MarkdownV2' });
             }
           } catch (e) {

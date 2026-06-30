@@ -170,15 +170,21 @@ function Profile({
 
       {/* Admin Panel Group */}
       {isAdmin && (
-        <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-          <div onClick={() => setActiveTab('admin')} style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
-              <ShieldAlert size={18} />
+        <>
+          <div style={{ background: 'var(--secondary-bg-color)', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <div onClick={() => setActiveTab('admin')} style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+                <ShieldAlert size={18} />
+              </div>
+              <div style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: 'var(--expense-color)' }}>{t.adminPanel}</div>
+              <ChevronRight size={18} color="var(--hint-color)" />
             </div>
-            <div style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: 'var(--expense-color)' }}>{t.adminPanel}</div>
-            <ChevronRight size={18} color="var(--hint-color)" />
           </div>
-        </div>
+          
+          <div style={{ textAlign: 'center', marginBottom: '40px', color: 'var(--hint-color)', fontSize: '12px', fontWeight: '600' }}>
+            Hisob Bot v1.1.0
+          </div>
+        </>
       )}
 
       {/* Settings Modal overlay */}
