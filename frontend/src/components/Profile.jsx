@@ -146,26 +146,6 @@ function Profile({
           <ChevronRight size={18} color="var(--hint-color)" />
         </div>
 
-        {/* Subscription Info */}
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
-              <span style={{ fontSize: '18px' }}>⭐</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-color)' }}>Obuna holati</div>
-              <div style={{ fontSize: '13px', color: 'var(--hint-color)' }}>
-                {settings?.premium_until && new Date(settings.premium_until) > new Date() ? '✅ Faol' : '❌ Muddati tugagan'}
-              </div>
-            </div>
-          </div>
-          {settings?.premium_until && (
-            <div style={{ background: 'var(--bg-color)', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', color: 'var(--text-color)', marginTop: '4px' }}>
-              <strong>Muddati:</strong> {new Date(settings.premium_until).toLocaleDateString('uz-UZ')} gacha
-            </div>
-          )}
-        </div>
-
         <hr style={{ border: 'none', borderTop: '1px solid var(--card-border)', margin: '0' }} />
 
         <div onClick={() => setShowLinkModal(true)} style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--card-border)', cursor: 'pointer' }}>

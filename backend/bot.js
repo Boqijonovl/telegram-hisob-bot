@@ -166,40 +166,6 @@ export function initBot() {
     const isStart = ctx.message?.text?.startsWith('/start');
     const isGetId = ctx.message?.text?.startsWith('/getid');
     const isHelp = ctx.message?.text?.startsWith('/help');
-    const isPayCallback = ctx.callbackQuery?.data === 'pay_receipt';
-    
-    if (!isStart && !isGetId && !isHelp && !isPayCallback && userId !== '123456') {
-      try {
-        const settings = await db.getSettings(userId);
-        if (settings.premium_until && new Date(settings.premium_until) < new Date()) {
-          const msg = `⚠️ Hurmatli foydalanuvchi, sizning obuna muddatingiz tugagan.
-
-Botdan va ilovadan foydalanishni davom ettirish uchun oylik to'lovni amalga oshiring:
-💳 Karta: 9860 3501 4637 6586 (Boqijonov Boburjon)
-💵 Summa: 15 000 so'm
-
-To'lovni amalga oshirgach, quyidagi tugmani bosing va chekni yuboring.`;
-          
-          if (ctx.callbackQuery) {
-            try { await ctx.answerCbQuery(); } catch(e){}
-            return ctx.editMessageText(msg, Markup.inlineKeyboard([[Markup.button.callback('To\'ladim ✅', 'pay_receipt')]]));
-          } else {
-            return ctx.reply(msg, Markup.inlineKeyboard([[Markup.button.callback('To\'ladim ✅', 'pay_receipt')]]));
-          }
-        }
-      } catch (e) {
-        console.error('Premium bot check error:', e);
-      }
-    }
-
-    // Awaiting receipt state handle for text (if they just type something instead of sending photo)
-    if (ctx.message?.text && !isStart && !isGetId && !isHelp) {
-      const settings = await db.getSettings(userId);
-      if (settings.awaiting_receipt) {
-        return ctx.reply("Sizdan to'lov chekining rasmini (skrinshotini) kutmoqdaman. Iltimos, rasm yuboring.");
-      }
-    }
-    
     return next();
   });
 
@@ -213,17 +179,10 @@ To'lovni amalga oshirgach, quyidagi tugmani bosing va chekni yuboring.`;
     const firstName = ctx.from.first_name || 'Foydalanuvchi';
     const userId = String(ctx.from.id);
     
-    // Set 5-day trial if premium_until is null
     try {
-      const settings = await db.getSettings(userId, firstName, ctx.from.username);
-      if (!settings.premium_until) {
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 5);
-        await db.updatePremiumStatus(userId, { premium_until: trialEnd.toISOString() });
-        ctx.reply("🎁 Sizga botdan to'liq foydalanish uchun 5 kunlik Bepul muddat taqdim etildi!");
-      }
+      await db.getSettings(userId, firstName, ctx.from.username);
     } catch(e) {
-      console.log('Error setting trial', e);
+      console.log('Error getting settings', e);
     }
 
     const message = `👋 Assalomu alaykum, ${firstName}!
@@ -237,7 +196,7 @@ Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush k
     const userUrl = `${webAppUrl}?tgId=${userId}`;
 
     const keyboardButton = Markup.keyboard([
-      ['⭐ Obuna']
+      ['Mini App 📱']
     ]).resize();
 
     const inlineButton = Markup.inlineKeyboard([
