@@ -357,92 +357,35 @@ Quick Input via Bot:
 
   // Pay receipt action (Obuna)
   bot.action('pay_receipt', async (ctx) => {
+    try { await ctx.answerCbQuery(); } catch(e) {}
+    const msg = `Iltimos, to'lovni tasdiqlovchi chek (skrinshot yoki rasm) ni quyidagi adminga yuboring:\n👉 @Boqijonovv\n\nChekni yuborib bo'lgach, pastdagi "Jo'natdim ✅" tugmasini bosing.`;
+    ctx.reply(msg, Markup.inlineKeyboard([[Markup.button.callback("Jo'natdim ✅", 'receipt_sent')]]));
+  });
+
+  // Receipt sent action
+  bot.action('receipt_sent', async (ctx) => {
     const userId = String(ctx.from.id);
     try { await ctx.answerCbQuery(); } catch(e) {}
-    await db.updatePremiumStatus(userId, { awaiting_receipt: true });
-    ctx.reply("Iltimos, to'lovni tasdiqlovchi chek (skrinshot yoki rasm) yuboring.\nDiqqat, to'lanishi kerak bo'lgan summa 15 000 so'm.");
-  });
-
-  bot.command('obuna', async (ctx) => {
-    const userId = String(ctx.from.id);
-    const settings = await db.getSettings(userId);
     
-    let text = "🌟 Sizning obuna holatingiz:\n\n";
-    if (settings.premium_until) {
-      const untilDate = new Date(settings.premium_until);
-      const isExpired = untilDate < new Date();
-      text += `Muddati: ${untilDate.toLocaleDateString('uz-UZ')}\n`;
-      text += `Holati: ${isExpired ? "❌ Muddati tugagan" : "✅ Faol"}\n\n`;
-      if (isExpired) {
-        text += "Obunangizni davom ettirish uchun to'lovni amalga oshiring:\n💳 Karta: 9860 3501 4637 6586 (Boqijonov Boburjon)\n💵 Summa: 15 000 so'm/oy";
-        return ctx.reply(text, Markup.inlineKeyboard([[Markup.button.callback('To\'ladim ✅', 'pay_receipt')]]));
-      } else {
-        return ctx.reply(text);
+    // Automatically grant 30 days
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 30);
+    await db.updatePremiumStatus(userId, { premium_until: trialEnd.toISOString(), awaiting_receipt: false });
+    
+    ctx.reply("✅ Obuna muvaffaqiyatli qabul qilindi! Botdan to'liq foydalanishga ruxsat berildi. (Agar chek yubormagan bo'lsangiz yoki chek qalbaki bo'lsa, obunangiz admin tomonidan bloklanishi mumkin).");
+    
+    const ADMIN_GROUP_ID = process.env.ADMIN_GROUP_ID || ''; 
+    if (ADMIN_GROUP_ID) {
+      try {
+        await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `📝 Foydalanuvchi ${ctx.from.first_name} (@${ctx.from.username || 'yoq'}) "Jo'natdim ✅" tugmasini bosdi va o'ziga 1 oy obuna oldi. Iltimos chekini @Boqijonovv orqali tekshiring.`);
+      } catch (e) {
+        console.error('Failed to notify admin group', e);
       }
-    } else {
-      text += "Obuna ma'lumoti topilmadi.";
-      return ctx.reply(text);
     }
   });
 
-  // Handle photos (for receipts and OCR)
+  // Handle photos (general)
   bot.on('photo', async (ctx) => {
-    const userId = String(ctx.from.id);
-    const settings = await db.getSettings(userId);
-    const ADMIN_GROUP_ID = process.env.ADMIN_GROUP_ID || ''; 
-
-    if (settings.awaiting_receipt) {
-      if (ADMIN_GROUP_ID) {
-        try {
-          await ctx.telegram.forwardMessage(ADMIN_GROUP_ID, ctx.chat.id, ctx.message.message_id);
-          await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `👆 Ushbu chek yuboruvchisi: ${ctx.from.first_name} (@${ctx.from.username || 'yoq'}). Telegram ID: ${userId}`);
-        } catch(e) {
-          console.error("Guruhga yuborib bo'lmadi", e);
-        }
-      }
-
-      ctx.reply("Chek qabul qilindi. Sun'iy intellekt orqali tekshirilmoqda, iltimos kuting... ⏳");
-
-      try {
-        const photo = ctx.message.photo.pop();
-        const fileLink = await ctx.telegram.getFileLink(photo.file_id);
-        
-        // Faqat eng tilini yuklaymiz, chunki raqamlarni o'qish tezroq bo'ladi
-        const worker = await createWorker('eng');
-        const { data: { text } } = await worker.recognize(fileLink.href);
-        await worker.terminate();
-
-        const lowerText = text.toLowerCase().replace(/\\s+/g, '');
-        console.log("OCR Natijasi:", text);
-        
-        const hasName = lowerText.includes('boqijonov') || lowerText.includes('boburjon');
-        const hasCard = lowerText.includes('9860') || lowerText.includes('6586') || lowerText.includes('4637');
-        const hasAmount = lowerText.includes('15000') || lowerText.includes('15.000') || lowerText.includes('15,000');
-
-        if ((hasName || hasCard) && hasAmount) {
-          const trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + 30);
-          await db.updatePremiumStatus(userId, { premium_until: trialEnd.toISOString(), awaiting_receipt: false });
-          
-          ctx.reply("✅ Tabriklaymiz! To'lovingiz tasdiqlandi. Sizning obunangiz 1 oyga uzaytirildi. Botdan foydalanishda davom etishingiz mumkin!");
-          if (ADMIN_GROUP_ID) {
-            await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `✅ Yuqoridagi chek (${ctx.from.first_name}) AI tomonidan AVTOMAT tasdiqlandi va 1 oy uzaytirildi.`);
-          }
-        } else {
-          await db.updatePremiumStatus(userId, { awaiting_receipt: false });
-          ctx.reply("⚠️ Chekni avtomatik tasdiqlashning imkoni bo'lmadi (Rasm xira yoki summa aniqlanmadi). Chek adminlarga yuborildi. Ular tekshirib obunani faollashtiradilar.");
-          if (ADMIN_GROUP_ID) {
-            await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `⚠️ Yuqoridagi chek AI tomonidan o'qilmadi. Agar u to'g'ri bo'lsa, Mini App -> Admin Panel orqali blokdan chiqaring (yoki SQL orqali premium qo'shing).`);
-          }
-        }
-      } catch (err) {
-        console.error('Error in receipt OCR:', err);
-        await db.updatePremiumStatus(userId, { awaiting_receipt: false });
-        ctx.reply("Chekni o'qishda tizim xatosi yuz berdi. Adminlar tekshirishadi.");
-      }
-      return;
-    }
-
     ctx.reply("Rasm qabul qilindi. Hozirda rasm asosida tranzaksiyalarni qo'shish funksiyasi AI yordamida tez orada to'liq ishga tushadi.");
   });
 

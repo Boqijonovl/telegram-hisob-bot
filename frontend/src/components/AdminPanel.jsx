@@ -35,6 +35,9 @@ function AdminPanel({
   };
 
   const handleRevokePremium = async (userId) => {
+    const reason = window.prompt("To'lovni bekor qilish sababini yozing (Bu izoh foydalanuvchiga xabar qilib yuboriladi):", "Chek qalbaki yoki guruhga yuborilmagan");
+    if (reason === null) return; // Bekor qilish bosildi
+    
     if (!window.confirm("Rostdan ham bu foydalanuvchining to'lovini bekor qilib, qulflamoqchimisiz?")) return;
     try {
       const res = await fetch(`${apiUrl}/api/admin/revoke-premium`, {
@@ -43,11 +46,11 @@ function AdminPanel({
           'Content-Type': 'application/json',
           'x-telegram-user-id': tgUser?.id || '123456'
         },
-        body: JSON.stringify({ targetUserId: userId })
+        body: JSON.stringify({ targetUserId: userId, reason })
       });
       if (res.ok) {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-        alert("To'lov bekor qilindi va foydalanuvchiga xabar yuborildi.");
+        alert("To'lov bekor qilindi va foydalanuvchiga izoh bilan xabar yuborildi.");
       }
     } catch(e) {
       console.error(e);

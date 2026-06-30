@@ -508,7 +508,7 @@ app.post('/api/settings/link', async (req, res) => {
 app.post('/api/admin/revoke-premium', async (req, res) => {
   try {
     const userId = getUserId(req);
-    const { targetUserId } = req.body;
+    const { targetUserId, reason } = req.body;
 
     const settings = await db.getSettings(userId);
     const isAdmin = String(userId) === '1037362053' || (process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID)) || settings.is_admin;
@@ -522,10 +522,8 @@ app.post('/api/admin/revoke-premium', async (req, res) => {
     });
 
     try {
-      await bot.telegram.sendMessage(
-        targetUserId,
-        "⚠️ Sizning qabul qilingan oylik to'lovingiz admin tomonidan bekor qilindi.\nIltimos to'lovni qayta amalga oshiring va chekni tekshirib yuboring."
-      );
+      const msg = `⚠️ Sizning qabul qilingan oylik to'lovingiz admin tomonidan bekor qilindi.\n\n📝 Sabab: ${reason || "Sabab ko'rsatilmadi"}\n\nIltimos to'lovni qayta amalga oshiring va chekni tekshirib yuboring.`;
+      await bot.telegram.sendMessage(targetUserId, msg);
     } catch(err) {
       console.log('Failed to notify user about revoke:', err);
     }
