@@ -731,7 +731,7 @@ export async function broadcastMessage(message) {
 
 // CRON JOBS for Scheduled Tasks
 export function initCronJobs() {
-  // Run every day at 09:00 AM
+  // Run every day at 09:00 AM (Uzbekistan time)
   cron.schedule('0 9 * * *', async () => {
     if (!bot) return;
     try {
@@ -775,13 +775,12 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error processing debts for user ${user.user_id}:`, e);
         }
-      }
     } catch (error) {
       console.error('Error in daily cron job execution:', error);
     }
-  });
+  }, { timezone: 'Asia/Tashkent' });
 
-  // Weekly Word Report (Sunday 23:59)
+  // Weekly Word Report (Sunday 23:59 Uzbekistan time)
   cron.schedule('59 23 * * 0', async () => {
     if (!bot) return;
     try {
@@ -813,13 +812,12 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error generating weekly report for ${user.user_id}:`, e);
         }
-      }
     } catch (error) {
       console.error('Error in weekly cron job execution:', error);
     }
-  });
+  }, { timezone: 'Asia/Tashkent' });
 
-  // Monthly Word Report (1st day of the month at 00:00)
+  // Monthly Word Report (1st day of the month at 00:00 Uzbekistan time)
   cron.schedule('0 0 1 * *', async () => {
     if (!bot) return;
     try {
@@ -858,9 +856,8 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error generating monthly report for ${user.user_id}:`, e);
         }
-      }
     } catch (error) {
       console.error('Error in monthly cron job execution:', error);
     }
-  });
+  }, { timezone: 'Asia/Tashkent' });
 }
