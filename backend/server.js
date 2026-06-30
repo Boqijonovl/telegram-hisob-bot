@@ -32,6 +32,26 @@ const getUserId = (req) => {
 
 // --- API Endpoints ---
 
+// Premium check middleware
+app.use(async (req, res, next) => {
+  if (req.path === '/api/settings' || req.path.startsWith('/api/admin')) {
+    return next();
+  }
+  
+  const userId = getUserId(req);
+  if (userId === '123456') return next();
+  
+  try {
+    const settings = await db.getSettings(userId);
+    if (settings.premium_until && new Date(settings.premium_until) < new Date()) {
+      return res.status(402).json({ error: 'To\'lov muddati tugagan', code: 'PAYMENT_REQUIRED' });
+    }
+  } catch (e) {
+    console.error('Premium check error:', e);
+  }
+  next();
+});
+
 // Get all transactions (with pagination)
 app.get('/api/transactions', async (req, res) => {
   try {

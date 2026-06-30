@@ -98,20 +98,41 @@ export const db = {
     return true;
   },
 
-  // Get budget & settings
+  // Get settings for a user
   async getSettings(userId, firstName = '', username = '') {
-    // We get the raw user settings first to see if they are linked
     const { data: rawData } = await supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', String(userId))
       .maybeSingle();
+      
+    // Default config if none
+    const defaultConfig = {
+      user_id: String(userId),
+      currency: 'UZS',
+      budget: null,
+      is_blocked: false,
+      linked_to: null,
+      my_linked_to: null,
+      first_name: firstName || '',
+      username: username || '',
+      premium_until: null,
+      awaiting_receipt: false
+    };
 
-    const resolvedId = rawData?.linked_to ? rawData.linked_to : String(userId);
-    
+    if (!rawData) {
+      const { data: inserted } = await supabase
+        .from('user_settings')
+        .insert([defaultConfig])
+        .select()
+        .single();
+      return inserted;
+    }
+
+    const resolvedId = rawData.linked_to || String(userId);
     let targetData = rawData;
-    if (rawData?.linked_to) {
-      // If linked, fetch the target's settings for budget/currency
+
+    if (rawData.linked_to) {
       const { data: linkedData } = await supabase
         .from('user_settings')
         .select('*')
@@ -120,46 +141,26 @@ export const db = {
       targetData = linkedData || rawData;
     }
 
-    if (!targetData && !rawData) {
-      // Create and return default settings if not exists
-      const defaultSettings = {
-        user_id: String(userId),
-        currency: 'UZS',
-        budget: 0,
-        first_name: firstName || '',
-        username: username || '',
-        is_blocked: false
-      };
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('user_settings')
-        .insert([defaultSettings])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Supabase error inserting default settings:', insertError);
-        throw insertError;
+    // Update names if they changed and weren't set
+    if (firstName || username) {
+      const isNameMissing = !targetData.first_name && !targetData.username;
+      const isNameDifferent = targetData.first_name !== firstName || targetData.username !== username;
+      if (isNameMissing || isNameDifferent) {
+        const { data: updated } = await supabase
+          .from('user_settings')
+          .update({
+            first_name: firstName || targetData.first_name,
+            username: username || targetData.username
+          })
+          .eq('user_id', String(userId))
+          .select()
+          .maybeSingle();
+        if (updated) return updated;
       }
-      return inserted;
-    }
-
-    // Update names if changed
-    if ((firstName && targetData.first_name !== firstName) || (username && targetData.username !== username)) {
-      const { data: updated } = await supabase
-        .from('user_settings')
-        .update({
-          first_name: firstName || targetData.first_name,
-          username: username || targetData.username
-        })
-        .eq('user_id', String(userId))
-        .select()
-        .maybeSingle();
-      if (updated) return updated;
     }
 
     // Pass back their own linked_to status regardless of whose budget they are using
-    targetData.my_linked_to = rawData?.linked_to || null;
+    targetData.my_linked_to = rawData.linked_to || null;
     return targetData;
   },
 
@@ -182,6 +183,22 @@ export const db = {
 
     if (error) {
       console.error('Supabase error updating settings:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  // Update Premium & Receipt Status
+  async updatePremiumStatus(userId, updates) {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update(updates)
+      .eq('user_id', String(userId))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error updating premium status:', error);
       throw error;
     }
     return data;

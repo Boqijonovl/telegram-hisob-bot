@@ -126,6 +126,19 @@ function AdminPanel({
                     </button>
                     <button
                       disabled={isSelf}
+                      onClick={() => handleRevokePremium(user.user_id)}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '700',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        color: '#f59e0b',
+                        cursor: isSelf ? 'not-allowed' : 'pointer',
+                        marginRight: '8px'
+                      }}
+                    >
+                      To'lanmagan
+                    </button>
+                    <button
+                      disabled={isSelf}
                       onClick={() => handleToggleBlock(user.user_id, user.is_blocked)}
                       style={{
                         padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '700',

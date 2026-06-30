@@ -574,6 +574,33 @@ function App() {
     );
   }
 
+  // Premium Paywall Screen
+  const isPremiumExpired = settings?.premium_until && new Date(settings.premium_until) < new Date();
+  if (isPremiumExpired && tgUser?.id !== 123456) {
+    return (
+      <div className="app-container locked-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '24px' }}>
+        <div className="empty-state" style={{ padding: '36px 24px', textAlign: 'center', background: 'var(--card-bg)', border: '1px solid var(--expense-color)', borderRadius: 'var(--radius-lg)', boxShadow: '0 8px 32px rgba(239, 68, 68, 0.15)' }}>
+          <Lock size={48} color="var(--expense-color)" style={{ margin: '0 auto 16px auto', display: 'block' }} />
+          <h2 style={{ color: 'var(--text-color)', fontSize: '22px', fontWeight: '800', marginBottom: '12px' }}>To'lov muddati tugagan</h2>
+          <p style={{ color: 'var(--hint-color)', fontSize: '14px', lineHeight: 1.5, marginBottom: '24px' }}>
+            Ilovadan foydalanishni davom ettirish uchun oylik to'lovni (15 000 so'm) amalga oshiring.
+          </p>
+          <div style={{ background: 'var(--secondary-bg-color)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--hint-color)', marginBottom: '4px' }}>Karta raqami (Boqijonov Boburjon):</p>
+            <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-color)', letterSpacing: '1px' }}>9860 3501 4637 6586</p>
+          </div>
+          <button 
+            onClick={() => window.Telegram?.WebApp?.close()}
+            style={{ width: '100%', background: 'var(--button-color)', color: 'white', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '16px' }}
+          >
+            Bot orqali chek yuborish
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="app-container">
       {/* Ambient Glow Bubbles */}
