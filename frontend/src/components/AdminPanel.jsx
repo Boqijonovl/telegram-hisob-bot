@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Users, Send, BarChart2, CheckCircle, X, ExternalLink } from 'lucide-react';
 
-function AdminPanel({ 
+export default function AdminPanel({ 
   adminUsers, 
   adminBroadcastMsg, 
   setAdminBroadcastMsg, 
@@ -11,7 +11,8 @@ function AdminPanel({
   t,
   setActiveTab,
   apiUrl,
-  formatAmount
+  formatAmount,
+  fetchAdminUsers
 }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userStats, setUserStats] = useState(null);
@@ -141,9 +142,22 @@ function AdminPanel({
         </div>
 
         <div>
-          <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Users size={16} /> {t.usersList} ({adminUsers.length})
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={16} /> {t.usersList} ({adminUsers.length})
+            </label>
+            <button 
+              onClick={() => {
+                if(fetchAdminUsers) {
+                  window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+                  fetchAdminUsers();
+                }
+              }}
+              style={{ background: 'none', border: '1px solid var(--card-border)', color: 'var(--text-color)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+            >
+              🔄 Yangilash
+            </button>
+          </div>
           <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {adminUsers.map(user => {
               const isSelf = String(user.user_id) === String(tgUser.id);
@@ -294,5 +308,3 @@ function AdminPanel({
     </div>
   );
 }
-
-export default AdminPanel;

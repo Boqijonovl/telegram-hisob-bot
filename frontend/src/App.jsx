@@ -773,6 +773,7 @@ function App() {
               setActiveTab={setActiveTab}
               apiUrl={API_URL}
               formatAmount={formatAmount}
+              fetchAdminUsers={fetchAdminUsers}
             />
           )}
 
