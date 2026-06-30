@@ -112,8 +112,6 @@ export const db = {
       currency: 'UZS',
       budget: null,
       is_blocked: false,
-      linked_to: null,
-      my_linked_to: null,
       first_name: firstName || '',
       username: username || '',
       premium_until: null,
