@@ -355,12 +355,34 @@ Quick Input via Bot:
     ctx.editMessageText(escapeMarkdown(text), { parse_mode: 'MarkdownV2', reply_markup: Markup.inlineKeyboard([[Markup.button.webApp('Open Mini App 📱', webAppUrl)]]).reply_markup });
   });
 
-  // Pay receipt action
+  // Pay receipt action (Obuna)
   bot.action('pay_receipt', async (ctx) => {
     const userId = String(ctx.from.id);
     try { await ctx.answerCbQuery(); } catch(e) {}
     await db.updatePremiumStatus(userId, { awaiting_receipt: true });
     ctx.reply("Iltimos, to'lovni tasdiqlovchi chek (skrinshot yoki rasm) yuboring.\nDiqqat, to'lanishi kerak bo'lgan summa 15 000 so'm.");
+  });
+
+  bot.command('obuna', async (ctx) => {
+    const userId = String(ctx.from.id);
+    const settings = await db.getSettings(userId);
+    
+    let text = "🌟 Sizning obuna holatingiz:\n\n";
+    if (settings.premium_until) {
+      const untilDate = new Date(settings.premium_until);
+      const isExpired = untilDate < new Date();
+      text += `Muddati: ${untilDate.toLocaleDateString('uz-UZ')}\n`;
+      text += `Holati: ${isExpired ? "❌ Muddati tugagan" : "✅ Faol"}\n\n`;
+      if (isExpired) {
+        text += "Obunangizni davom ettirish uchun to'lovni amalga oshiring:\n💳 Karta: 9860 3501 4637 6586 (Boqijonov Boburjon)\n💵 Summa: 15 000 so'm/oy";
+        return ctx.reply(text, Markup.inlineKeyboard([[Markup.button.callback('To\'ladim ✅', 'pay_receipt')]]));
+      } else {
+        return ctx.reply(text);
+      }
+    } else {
+      text += "Obuna ma'lumoti topilmadi.";
+      return ctx.reply(text);
+    }
   });
 
   // Handle photos (for receipts and OCR)
@@ -385,7 +407,8 @@ Quick Input via Bot:
         const photo = ctx.message.photo.pop();
         const fileLink = await ctx.telegram.getFileLink(photo.file_id);
         
-        const worker = await createWorker('uzb+rus+eng');
+        // Faqat eng tilini yuklaymiz, chunki raqamlarni o'qish tezroq bo'ladi
+        const worker = await createWorker('eng');
         const { data: { text } } = await worker.recognize(fileLink.href);
         await worker.terminate();
 
