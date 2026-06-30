@@ -230,14 +230,13 @@ To'lovni amalga oshirgach, quyidagi tugmani bosing va chekni yuboring.`;
 
 Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush kelibsiz! Bu loyiha orqali o'z daromad va harajatlaringizni osongina hisob-kitob qilishingiz mumkin.
 
-👇 Barcha qulayliklarni ko'rish uchun quyidagi 'Hisobni Ochish 📊' tugmasini bosing.
+👇 Barcha qulayliklarni ko'rish uchun quyidagi 'Mini App-ni ochish 📱' tugmasini bosing.
 
 💡 Qo'llanma va bot haqida to'liq ma'lumot olish uchun /help buyrug'ini bosing!`;
 
     const userUrl = `${webAppUrl}?tgId=${userId}`;
 
     const keyboardButton = Markup.keyboard([
-      [Markup.button.webApp('Hisobni Ochish 📊', userUrl)],
       ['⭐ Obuna']
     ]).resize();
 
@@ -256,13 +255,14 @@ Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush k
       }
     );
     
-    // Notify admin
-    const ADMIN_GROUP_ID = process.env.ADMIN_GROUP_ID || '';
-    if (ADMIN_GROUP_ID && !settings.created_at || (settings.created_at && new Date() - new Date(settings.created_at) < 60000)) {
-      try {
-        await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `🆕 Yangi foydalanuvchi botga qo'shildi:\nIsm: ${firstName}\nUsername: @${ctx.from.username || 'yoq'}\nID: ${userId}`);
-      } catch(e) {}
-    }
+    // Notify admin directly instead of group
+    const ADMIN_ID = process.env.ADMIN_ID || '1037362053'; // Default to Boburjon's ID
+    try {
+      const isNewUser = !settings || !settings.created_at || (settings.created_at && new Date() - new Date(settings.created_at) < 60000);
+      if (ADMIN_ID && isNewUser && String(ADMIN_ID) !== String(userId)) {
+        await ctx.telegram.sendMessage(ADMIN_ID, `🆕 Yangi foydalanuvchi botga qo'shildi:\nIsm: ${firstName}\nUsername: @${ctx.from.username || 'yoq'}\nID: ${userId}`);
+      }
+    } catch(e) {}
   });
 
   // Handle '⭐ Obuna' button click
