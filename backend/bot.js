@@ -189,27 +189,13 @@ export function initBot() {
 
 Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush kelibsiz! Bu loyiha orqali o'z daromad va harajatlaringizni osongina hisob-kitob qilishingiz mumkin.
 
-👇 Barcha qulayliklarni ko'rish uchun quyidagi 'Mini App-ni ochish 📱' tugmasini bosing.
-
 💡 Qo'llanma va bot haqida to'liq ma'lumot olish uchun /help buyrug'ini bosing!`;
-
-    const userUrl = `${webAppUrl}?tgId=${userId}`;
-
-    const keyboardButton = Markup.keyboard([
-      ['Mini App 📱']
-    ]).resize();
-
-    const inlineButton = Markup.inlineKeyboard([
-      [Markup.button.webApp('Mini App-ni ochish 📱', userUrl)]
-    ]);
 
     ctx.replyWithMarkdownV2(
       escapeMarkdown(message),
       {
         reply_markup: {
-          inline_keyboard: inlineButton.reply_markup.inline_keyboard,
-          keyboard: keyboardButton.reply_markup.keyboard,
-          resize_keyboard: true
+          remove_keyboard: true
         }
       }
     );
