@@ -234,12 +234,15 @@ Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush k
 
 💡 Qo'llanma va bot haqida to'liq ma'lumot olish uchun /help buyrug'ini bosing!`;
 
+    const userUrl = `${webAppUrl}?tgId=${userId}`;
+
     const keyboardButton = Markup.keyboard([
-      [Markup.button.webApp('Hisobni Ochish 📊', webAppUrl)]
+      [Markup.button.webApp('Hisobni Ochish 📊', userUrl)],
+      ['⭐ Obuna']
     ]).resize();
 
     const inlineButton = Markup.inlineKeyboard([
-      [Markup.button.webApp('Mini App-ni ochish 📱', webAppUrl)]
+      [Markup.button.webApp('Mini App-ni ochish 📱', userUrl)]
     ]);
 
     ctx.replyWithMarkdownV2(
@@ -252,6 +255,21 @@ Sizning moliyaviy holatingizni to'liq nazorat qiluvchi Hisob-kitob botiga xush k
         }
       }
     );
+    
+    // Notify admin
+    const ADMIN_GROUP_ID = process.env.ADMIN_GROUP_ID || '';
+    if (ADMIN_GROUP_ID && !settings.created_at || (settings.created_at && new Date() - new Date(settings.created_at) < 60000)) {
+      try {
+        await ctx.telegram.sendMessage(ADMIN_GROUP_ID, `🆕 Yangi foydalanuvchi botga qo'shildi:\nIsm: ${firstName}\nUsername: @${ctx.from.username || 'yoq'}\nID: ${userId}`);
+      } catch(e) {}
+    }
+  });
+
+  // Handle '⭐ Obuna' button click
+  bot.hears('⭐ Obuna', (ctx) => {
+    // Redirect to /obuna logic
+    ctx.message.text = '/obuna';
+    return bot.handleUpdate(ctx.update);
   });
 
   // Help command with language selection

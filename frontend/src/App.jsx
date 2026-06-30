@@ -112,9 +112,19 @@ function App() {
           document.documentElement.style.setProperty('--link-color', tg.themeParams.link_color);
         }
 
-        const user = tg.initDataUnsafe?.user;
+        let user = tg.initDataUnsafe?.user;
+        const urlParams = new URLSearchParams(window.location.search);
+        const tgIdParam = urlParams.get('tgId');
+
         if (user) {
           setTgUser(user);
+        } else if (tgIdParam) {
+          setTgUser({
+            id: tgIdParam,
+            first_name: 'Foydalanuvchi',
+            last_name: '',
+            username: ''
+          });
         } else {
           // Fallback user for browser testing
           setTgUser({
@@ -125,13 +135,25 @@ function App() {
           });
         }
       } else {
-        // Fallback user if not loaded inside Telegram
-        setTgUser({
-          id: '123456',
-          first_name: 'Dasturchi',
-          last_name: '(Browser)',
-          username: 'dev_browser'
-        });
+        const urlParams = new URLSearchParams(window.location.search);
+        const tgIdParam = urlParams.get('tgId');
+        
+        if (tgIdParam) {
+          setTgUser({
+            id: tgIdParam,
+            first_name: 'Foydalanuvchi',
+            last_name: '',
+            username: ''
+          });
+        } else {
+          // Fallback user if not loaded inside Telegram
+          setTgUser({
+            id: '123456',
+            first_name: 'Dasturchi',
+            last_name: '(Browser)',
+            username: 'dev_browser'
+          });
+        }
       }
     } catch (error) {
       console.error("Telegram WebApp initialization error:", error);
