@@ -576,7 +576,7 @@ function App() {
 
   // Premium Paywall Screen
   const isPremiumExpired = settings?.premium_until && new Date(settings.premium_until) < new Date();
-  if (isPremiumExpired && tgUser?.id !== 123456) {
+  if (isPremiumExpired && tgUser?.id !== 123456 && !settings?.isAdmin) {
     return (
       <div className="app-container locked-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '24px' }}>
         <div className="empty-state" style={{ padding: '36px 24px', textAlign: 'center', background: 'var(--card-bg)', border: '1px solid var(--expense-color)', borderRadius: 'var(--radius-lg)', boxShadow: '0 8px 32px rgba(239, 68, 68, 0.15)' }}>

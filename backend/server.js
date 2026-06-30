@@ -504,6 +504,75 @@ app.post('/api/settings/link', async (req, res) => {
   }
 });
 
+// Revoke premium (Admin)
+app.post('/api/admin/revoke-premium', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { targetUserId } = req.body;
+
+    const settings = await db.getSettings(userId);
+    const isAdmin = String(userId) === '1037362053' || (process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID)) || settings.is_admin;
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    await db.updatePremiumStatus(targetUserId, { 
+      premium_until: new Date().toISOString(),
+      awaiting_receipt: false
+    });
+
+    try {
+      await bot.telegram.sendMessage(
+        targetUserId,
+        "⚠️ Sizning qabul qilingan oylik to'lovingiz admin tomonidan bekor qilindi.\nIltimos to'lovni qayta amalga oshiring va chekni tekshirib yuboring."
+      );
+    } catch(err) {
+      console.log('Failed to notify user about revoke:', err);
+    }
+
+    res.json({ success: true, message: 'Foydalanuvchi to\'lovi bekor qilindi' });
+  } catch (error) {
+    console.error('Error revoking premium:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Grant premium (Admin)
+app.post('/api/admin/grant-premium', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { targetUserId, days = 30 } = req.body;
+
+    const settings = await db.getSettings(userId);
+    const isAdmin = String(userId) === '1037362053' || (process.env.ADMIN_ID && String(userId) === String(process.env.ADMIN_ID)) || settings.is_admin;
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + days);
+
+    await db.updatePremiumStatus(targetUserId, { 
+      premium_until: trialEnd.toISOString(),
+      awaiting_receipt: false
+    });
+
+    try {
+      await bot.telegram.sendMessage(
+        targetUserId,
+        "✅ Tabriklaymiz! Sizning obunangiz admin tomonidan tasdiqlandi va uzaytirildi. Botdan foydalanishda davom etishingiz mumkin."
+      );
+    } catch(err) {
+      console.log('Failed to notify user about grant:', err);
+    }
+
+    res.json({ success: true, message: 'Foydalanuvchi to\'lovi tasdiqlandi' });
+  } catch (error) {
+    console.error('Error granting premium:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Simple healthcheck
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });

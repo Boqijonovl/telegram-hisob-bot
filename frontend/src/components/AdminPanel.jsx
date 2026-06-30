@@ -34,6 +34,48 @@ function AdminPanel({
     }
   };
 
+  const handleRevokePremium = async (userId) => {
+    if (!window.confirm("Rostdan ham bu foydalanuvchining to'lovini bekor qilib, qulflamoqchimisiz?")) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/revoke-premium`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-user-id': tgUser?.id || '123456'
+        },
+        body: JSON.stringify({ targetUserId: userId })
+      });
+      if (res.ok) {
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+        alert("To'lov bekor qilindi va foydalanuvchiga xabar yuborildi.");
+      }
+    } catch(e) {
+      console.error(e);
+      alert("Xatolik yuz berdi");
+    }
+  };
+
+  const handleGrantPremium = async (userId) => {
+    if (!window.confirm("Rostdan ham bu foydalanuvchining obunasini 1 oyga uzaytirib faollashtirmoqchimisiz?")) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/grant-premium`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-user-id': tgUser?.id || '123456'
+        },
+        body: JSON.stringify({ targetUserId: userId, days: 30 })
+      });
+      if (res.ok) {
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+        alert("To'lov tasdiqlandi va foydalanuvchiga xabar yuborildi.");
+      }
+    } catch(e) {
+      console.error(e);
+      alert("Xatolik yuz berdi");
+    }
+  };
+
   const handleMakeAdmin = async (targetUserId) => {
     if (!window.confirm(t.adminMakeConfirm)) return;
     try {
@@ -124,19 +166,32 @@ function AdminPanel({
                     >
                       <ExternalLink size={14} />
                     </button>
-                    <button
-                      disabled={isSelf}
-                      onClick={() => handleRevokePremium(user.user_id)}
-                      style={{
-                        padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '700',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        color: '#f59e0b',
-                        cursor: isSelf ? 'not-allowed' : 'pointer',
-                        marginRight: '8px'
-                      }}
-                    >
-                      To'lanmagan
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginRight: '8px' }}>
+                      <button
+                        disabled={isSelf}
+                        onClick={() => handleGrantPremium(user.user_id)}
+                        style={{
+                          padding: '6px 10px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: '700',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10b981',
+                          cursor: isSelf ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        ✅ To'langan
+                      </button>
+                      <button
+                        disabled={isSelf}
+                        onClick={() => handleRevokePremium(user.user_id)}
+                        style={{
+                          padding: '6px 10px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: '700',
+                          background: 'rgba(245, 158, 11, 0.15)',
+                          color: '#f59e0b',
+                          cursor: isSelf ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        ❌ To'lanmagan
+                      </button>
+                    </div>
                     <button
                       disabled={isSelf}
                       onClick={() => handleToggleBlock(user.user_id, user.is_blocked)}
