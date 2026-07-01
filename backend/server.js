@@ -417,6 +417,28 @@ app.get('/api/rates', async (req, res) => {
   }
 });
 
+// Generate and send Excel report via Telegram Bot (for cached old clients)
+app.post('/api/send-word', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { data: transactions } = await db.getTransactions(userId);
+    const settings = await db.getSettings(userId);
+    const stats = await db.getStats(userId);
+    const now = new Date();
+    const periodName = `${now.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })} oyi uchun`;
+    const buffer = await generateExcelReport(transactions, stats, periodName, settings.currency || 'UZS');
+    await bot.telegram.sendDocument(
+      userId,
+      { source: buffer, filename: `Moliyaviy_Hisobot_${now.getTime()}.xlsx` },
+      { caption: `📊 Sizning moliyaviy hisobotingiz (Excel formati).` }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error sending excel report via old endpoint:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Generate and send Excel report via Telegram Bot
 app.post('/api/send-excel', async (req, res) => {
   try {
