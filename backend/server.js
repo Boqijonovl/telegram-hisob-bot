@@ -58,12 +58,30 @@ const getUserId = (req) => {
   return String(userId);
 };
 
+// Helper to check admin rights
+const checkAdmin = async (req) => {
+  const adminId = getUserId(req);
+  if (String(adminId) === '1037362053') return true;
+  if (process.env.ADMIN_ID && String(adminId) === String(process.env.ADMIN_ID)) return true;
+  
+  try {
+    const settings = await db.getSettings(adminId);
+    if (settings && settings.is_admin) return true;
+  } catch (e) {
+    console.error('Error checking admin status', e);
+  }
+  return false;
+};
+
 // --- API Endpoints ---
 
 // Maintenance Mode Middleware
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (isMaintenanceMode && !req.path.startsWith('/api/admin')) {
-    return res.status(503).json({ error: 'Tizimda ta\'mirlash ishlari olib borilmoqda. Iltimos keyinroq urining.', code: 'MAINTENANCE_MODE' });
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) {
+      return res.status(503).json({ error: 'Tizimda ta\'mirlash ishlari olib borilmoqda. Iltimos keyinroq urining.', code: 'MAINTENANCE_MODE' });
+    }
   }
   next();
 });
@@ -319,20 +337,7 @@ app.delete('/api/recurring/:id', async (req, res) => {
 
 // --- Admin Panel Endpoints ---
 
-// Helper to check admin rights
-const checkAdmin = async (req) => {
-  const adminId = getUserId(req);
-  if (String(adminId) === '1037362053') return true;
-  if (process.env.ADMIN_ID && String(adminId) === String(process.env.ADMIN_ID)) return true;
-  
-  try {
-    const settings = await db.getSettings(adminId);
-    if (settings && settings.is_admin) return true;
-  } catch (e) {
-    console.error('Error checking admin status', e);
-  }
-  return false;
-};
+
 
 // Get all users (Admin only)
 app.get('/api/admin/users', async (req, res) => {
