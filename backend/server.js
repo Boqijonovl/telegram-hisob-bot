@@ -417,8 +417,8 @@ app.get('/api/rates', async (req, res) => {
   }
 });
 
-// Generate and send Word report via Telegram Bot
-app.post('/api/send-word', async (req, res) => {
+// Generate and send Excel report via Telegram Bot
+app.post('/api/send-excel', async (req, res) => {
   try {
     const userId = getUserId(req);
     
@@ -430,7 +430,7 @@ app.post('/api/send-word', async (req, res) => {
     const now = new Date();
     const periodName = `${now.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })} oyi uchun`;
 
-    const buffer = await generateExcelReport(transactions, stats, periodName, stats.currency || 'UZS');
+    const buffer = await generateExcelReport(transactions, stats, periodName, settings.currency || 'UZS');
 
     await bot.telegram.sendDocument(
       userId,
