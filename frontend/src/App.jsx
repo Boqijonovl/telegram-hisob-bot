@@ -287,11 +287,25 @@ function App() {
     });
 
     const categories = Object.values(categoryTotals)
-      .filter(c => c.name !== 'Xazna') // Keep Xazna out of the main categories display if wanted, or leave it. We'll leave it for now.
+      .filter(c => c.name !== 'Xazna')
       .sort((a, b) => (b.expense + b.income) - (a.expense + a.income));
 
+    // Calculate all-time balance up to the end of the currently selected month
+    let allTimeIncome = 0;
+    let allTimeExpense = 0;
+    const endOfCurrentMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1);
+    
+    transactions.forEach(tx => {
+      const d = new Date(tx.date);
+      if (d < endOfCurrentMonth) {
+        if (tx.type === 'income') allTimeIncome += parseFloat(tx.amount);
+        else allTimeExpense += parseFloat(tx.amount);
+      }
+    });
+
     return {
-      balance: totalIncome - totalExpense,
+      balance: allTimeIncome - allTimeExpense,
+      monthBalance: totalIncome - totalExpense,
       totalIncome,
       totalExpense,
       budget: settings.budget || 0,
