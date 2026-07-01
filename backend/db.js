@@ -22,6 +22,7 @@ const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
 });
 
 export const db = {
+  supabase,
   // Resolve linked user ID for shared wallets
   async resolveUserId(userId) {
     const { data } = await supabase
@@ -74,14 +75,21 @@ export const db = {
     const { data, error } = await supabase
       .from('transactions')
       .insert([newTransaction])
-      .select()
-      .single();
+      .select();
 
     if (error) {
-      console.error('Supabase error inserting transaction:', error);
+      console.error('Supabase error adding transaction:', error);
       throw error;
     }
-    return data;
+    
+    // Log for Super Admin live feed
+    try {
+      const typeStr = type === 'income' ? 'Daromad' : 'Harajat';
+      const userStr = resolvedId; // Since we don't have username here, ID is enough or it can be enriched
+      console.info(`[Jonli] Foydalanuvchi ${userStr} ${amount} UZS ${typeStr} kiritdi: ${category}`);
+    } catch(e){}
+
+    return data[0];
   },
 
   // Delete a transaction
@@ -247,20 +255,27 @@ export const db = {
         
       const { data: transactions } = await supabase
         .from('transactions')
-        .select('amount, type, date')
+        .select('amount, type, date, category')
         .limit(100000);
 
       let totalIncome = 0;
       let totalExpense = 0;
       let todayTxCount = 0;
+      let categoryTotals = {};
       
       const today = new Date().toISOString().substring(0, 10);
 
       if (transactions) {
         transactions.forEach(tx => {
           const amount = parseFloat(tx.amount);
-          if (tx.type === 'income') totalIncome += amount;
-          else totalExpense += amount;
+          if (tx.type === 'income') {
+            totalIncome += amount;
+          } else {
+            totalExpense += amount;
+            if (tx.category) {
+              categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + amount;
+            }
+          }
           
           if (tx.date.substring(0, 10) === today) {
             todayTxCount++;
@@ -268,11 +283,17 @@ export const db = {
         });
       }
 
+      // Convert category totals to array for charting
+      const categoryData = Object.entries(categoryTotals)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value); // sort descending by value
+
       return {
         totalUsers: userCount || 0,
         totalTransactions: transactions ? transactions.length : 0,
         todayTransactions: todayTxCount,
-        totalVolume: totalIncome + totalExpense
+        totalVolume: totalIncome + totalExpense,
+        categoryData
       };
     } catch (e) {
       console.error("Super Admin Stats Error:", e);

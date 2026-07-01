@@ -4,18 +4,34 @@ import dotenv from 'dotenv';
 import { db } from './db.js';
 import { initBot, bot, sendBudgetAlert, broadcastMessage } from './bot.js';
 import { generateExcelReport } from './reportGenerator.js';
+import { generateBackupExcel } from './backupGenerator.js';
 
 // System logs buffer for Super Admin
 const systemLogs = [];
 const originalConsoleError = console.error;
-console.error = function (...args) {
+const originalConsoleInfo = console.info;
+
+function addLog(msg, type='error') {
   try {
-    const msg = args.map(a => typeof a === 'object' ? (a && a.message ? a.message : JSON.stringify(a)) : a).join(' ');
-    systemLogs.unshift({ time: new Date().toISOString(), message: msg });
-    if (systemLogs.length > 100) systemLogs.pop();
+    systemLogs.unshift({ time: new Date().toISOString(), message: msg, type });
+    if (systemLogs.length > 200) systemLogs.pop();
   } catch(e) {}
+}
+
+console.error = function (...args) {
+  const msg = args.map(a => typeof a === 'object' ? (a && a.message ? a.message : JSON.stringify(a)) : a).join(' ');
+  addLog(msg, 'error');
   originalConsoleError.apply(console, args);
 };
+
+console.info = function (...args) {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  addLog(msg, 'info');
+  originalConsoleInfo.apply(console, args);
+};
+
+// Global Maintenance Mode State
+let isMaintenanceMode = false;
 
 dotenv.config();
 
@@ -43,6 +59,14 @@ const getUserId = (req) => {
 };
 
 // --- API Endpoints ---
+
+// Maintenance Mode Middleware
+app.use((req, res, next) => {
+  if (isMaintenanceMode && !req.path.startsWith('/api/admin')) {
+    return res.status(503).json({ error: 'Tizimda ta\'mirlash ishlari olib borilmoqda. Iltimos keyinroq urining.', code: 'MAINTENANCE_MODE' });
+  }
+  next();
+});
 
 // Ping endpoint to keep Render server awake
 app.get('/api/ping', (req, res) => {
@@ -421,6 +445,41 @@ app.get('/api/admin/logs', async (req, res) => {
     res.json(systemLogs);
   } catch (error) {
     console.error('Error fetching system logs:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Toggle Maintenance Mode
+app.post('/api/admin/maintenance', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const { enabled } = req.body;
+    isMaintenanceMode = enabled;
+    
+    // Log the action
+    console.info(`[Tizim] Ta'mirlash rejimi ${enabled ? 'YOQILDI' : 'O\'CHIRILDI'}`);
+    
+    res.json({ success: true, isMaintenanceMode });
+  } catch (error) {
+    console.error('Error toggling maintenance mode:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Download System Backup
+app.get('/api/admin/backup', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const buffer = await generateBackupExcel();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Tizim_Arxivi_${new Date().toISOString().substring(0,10)}.xlsx`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error generating backup:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

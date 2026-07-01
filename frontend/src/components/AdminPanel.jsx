@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Users, Send, BarChart2, CheckCircle, X, ExternalLink, Activity, Search, FileText } from 'lucide-react';
+import { ShieldAlert, Users, Send, BarChart2, CheckCircle, X, ExternalLink, Activity, Search, FileText, Download, Lock } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 export default function AdminPanel({ 
   adminUsers, 
@@ -22,11 +23,17 @@ export default function AdminPanel({
   const [superStats, setSuperStats] = useState(null);
   const [systemLogs, setSystemLogs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   useEffect(() => {
     fetchSuperStats();
+    let interval;
     if (activeAdminTab === 'logs') {
       fetchLogs();
+      interval = setInterval(fetchLogs, 3000); // Live Logs refresh
+    }
+    return () => {
+      if (interval) clearInterval(interval);
     }
   }, [activeAdminTab]);
 
@@ -157,6 +164,66 @@ export default function AdminPanel({
               </div>
             </div>
 
+            {/* Global Category Chart */}
+            {superStats && superStats.categoryData && superStats.categoryData.length > 0 && (
+              <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '16px', textAlign: 'center' }}>
+                  Kategoriyalar bo'yicha global xarajatlar
+                </h4>
+                <div style={{ width: '100%', height: '200px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={superStats.categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {superStats.categoryData.map((entry, index) => {
+                          const colors = ['#f87171', '#60a5fa', '#facc15', '#4ade80', '#c084fc', '#f472b6'];
+                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Pie>
+                      <RechartsTooltip formatter={(value) => formatAmount(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+              <button
+                onClick={() => window.open(`${apiUrl}/api/admin/backup?tgId=${tgUser.id}`, '_blank')}
+                style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                <Download size={18} />
+                Baza Arxivi (Excel)
+              </button>
+              <button
+                onClick={async () => {
+                  if(!window.confirm(`Ta'mirlash rejimini ${isMaintenance ? 'o\'chirish' : 'yoqish'}ni tasdiqlaysizmi?`)) return;
+                  const res = await fetch(`${apiUrl}/api/admin/maintenance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-telegram-user-id': String(tgUser.id) },
+                    body: JSON.stringify({ enabled: !isMaintenance })
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    setIsMaintenance(data.isMaintenanceMode);
+                    alert(`Ta'mirlash rejimi ${data.isMaintenanceMode ? 'YOQILDI' : 'O\'CHIRILDI'}`);
+                  }
+                }}
+                style={{ background: isMaintenance ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isMaintenance ? '#ef4444' : '#f59e0b', border: `1px solid ${isMaintenance ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`, padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                <Lock size={18} />
+                {isMaintenance ? 'Tizimni Ochish' : "Ta'mirlash Rejimi"}
+              </button>
+            </div>
+
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '16px' }}>
               <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '8px', display: 'block' }}>
                 {t.broadcastLabel || "Barchaga xabar yuborish (Broadcast)"}
@@ -272,7 +339,7 @@ export default function AdminPanel({
                       <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
                         {new Date(log.time).toLocaleString('uz-UZ')}
                       </div>
-                      <div style={{ fontSize: '13px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: '13px', color: log.type === 'info' ? '#4ade80' : '#ff6b6b', wordBreak: 'break-all', fontFamily: 'monospace' }}>
                         {log.message}
                       </div>
                     </div>

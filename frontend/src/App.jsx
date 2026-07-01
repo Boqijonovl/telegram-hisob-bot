@@ -68,13 +68,13 @@ function App() {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
   };
   
-  // Multilingual State
   const [lang, setLang] = useState(localStorage.getItem('appLang') || 'uz');
 
   // Admin States
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminBroadcastMsg, setAdminBroadcastMsg] = useState('');
   const [isBlockedUser, setIsBlockedUser] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   // Active translation helper
   const t = translations[lang] || translations.uz;
@@ -183,17 +183,21 @@ function App() {
     'x-telegram-username': encodeURIComponent(tgUser?.username || 'admin')
   };
 
-  const { data: queryData, isLoading: queryLoading, isError, refetch: fetchData } = useQuery({
+  const { data: queryData, isLoading: queryLoading, isError, error, refetch: fetchData } = useQuery({
     queryKey: ['appData', tgUser?.id],
     queryFn: async () => {
       if (!tgUser?.id) return null;
-      const [txRes, settingsRes, catRes] = await Promise.all([
-        fetch(`${API_URL}/api/transactions`, { headers }),
-        fetch(`${API_URL}/api/settings`, { headers }),
-        fetch(`${API_URL}/api/categories`, { headers })
-      ]);
+      const txRes = await fetch(`${API_URL}/api/transactions`, { headers });
+      
+      if (txRes.status === 503) {
+        throw new Error('MAINTENANCE_MODE');
+      }
+
+      const settingsRes = await fetch(`${API_URL}/api/settings`, { headers });
+      const catRes = await fetch(`${API_URL}/api/categories`, { headers });
 
       if (!txRes.ok || !settingsRes.ok) {
+        if (settingsRes.status === 503) throw new Error('MAINTENANCE_MODE');
         throw new Error('API server returned error responses');
       }
 
@@ -242,8 +246,11 @@ function App() {
     }
     if (isError) {
       setLoading(false);
+      if (error && error.message === 'MAINTENANCE_MODE') {
+        setIsMaintenance(true);
+      }
     }
-  }, [queryLoading, queryData, isError]);
+  }, [queryLoading, queryData, isError, error]);
 
   const handlePrevMonth = () => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
@@ -600,6 +607,20 @@ function App() {
   };
 
   // Blocked View Screen
+  if (isMaintenance && !settings.isAdmin) {
+    return (
+      <div className="app-container locked-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '24px' }}>
+        <div className="empty-state" style={{ padding: '36px 24px', textAlign: 'center', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 'var(--radius-lg)' }}>
+          <Settings size={48} color="var(--button-color)" style={{ margin: '0 auto 16px auto', display: 'block', animation: 'spin 4s linear infinite' }} />
+          <h2 style={{ color: 'var(--text-color)', fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>Ta'mirlash Ishlari</h2>
+          <p style={{ color: 'var(--hint-color)', fontSize: '13px', lineHeight: 1.5 }}>
+            Tizimda vaqtincha ta'mirlash ishlari olib borilmoqda. Tez orada qaytamiz! Iltimos, keyinroq urining.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (isBlockedUser) {
     return (
       <div className="app-container locked-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '24px' }}>
