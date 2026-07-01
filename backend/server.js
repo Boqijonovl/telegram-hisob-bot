@@ -32,6 +32,10 @@ const getUserId = (req) => {
 
 // --- API Endpoints ---
 
+// Ping endpoint to keep Render server awake
+app.get('/api/ping', (req, res) => {
+  res.status(200).send('pong');
+});
 // Premium check middleware
 app.use(async (req, res, next) => {
   if (req.path === '/api/settings' || req.path.startsWith('/api/admin')) {
