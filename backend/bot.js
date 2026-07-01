@@ -4,7 +4,7 @@ import { createWorker } from 'tesseract.js';
 import { db } from './db.js';
 import axios from 'axios';
 import cron from 'node-cron';
-import { generateWordReport } from './reportGenerator.js';
+import { generateExcelReport } from './reportGenerator.js';
 
 dotenv.config();
 
@@ -792,11 +792,11 @@ export function initCronJobs() {
     }
   }, { timezone: 'Asia/Tashkent' });
 
-  // Weekly Word Report (Sunday 23:59 Uzbekistan time)
+  // Weekly Excel Report (Sunday 23:59 Uzbekistan time)
   cron.schedule('59 23 * * 0', async () => {
     if (!bot) return;
     try {
-      console.log('⏰ Running weekly word report cron job...');
+      console.log('⏰ Running weekly excel report cron job...');
       const users = await db.getAllUserSettings();
       for (const user of users) {
         if (user.user_id === '123456') continue;
@@ -814,12 +814,12 @@ export function initCronJobs() {
           const startDate = oneWeekAgo.toLocaleDateString('uz-UZ');
           const endDate = new Date().toLocaleDateString('uz-UZ');
           
-          const buffer = await generateWordReport(weeklyTx, null, `${startDate} - ${endDate}`);
+          const buffer = await generateExcelReport(weeklyTx, null, `${startDate} - ${endDate}`);
           
           await bot.telegram.sendDocument(
             user.user_id,
-            { source: buffer, filename: `Haftalik_Hisobot_${endDate}.docx` },
-            { caption: `📊 Sizning haftalik moliyaviy hisobotingiz (Word formati).\nDavr: ${startDate} - ${endDate}` }
+            { source: buffer, filename: `Haftalik_Hisobot_${endDate}.xlsx` },
+            { caption: `📊 Sizning haftalik moliyaviy hisobotingiz (Excel formati).\nDavr: ${startDate} - ${endDate}` }
           );
         } catch (e) {
           console.error(`Error generating weekly report for ${user.user_id}:`, e);
@@ -830,11 +830,11 @@ export function initCronJobs() {
     }
   }, { timezone: 'Asia/Tashkent' });
 
-  // Monthly Word Report (1st day of the month at 00:00 Uzbekistan time)
+  // Monthly Excel Report (1st day of the month at 00:00 Uzbekistan time)
   cron.schedule('0 0 1 * *', async () => {
     if (!bot) return;
     try {
-      console.log('⏰ Running monthly word report cron job...');
+      console.log('⏰ Running monthly excel report cron job...');
       const users = await db.getAllUserSettings();
       for (const user of users) {
         if (user.user_id === '123456') continue;
@@ -859,12 +859,12 @@ export function initCronJobs() {
 
           const periodName = `${firstDayOfLastMonth.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })} oyi uchun`;
           
-          const buffer = await generateWordReport(monthlyTx, null, periodName);
+          const buffer = await generateExcelReport(monthlyTx, null, periodName);
           
           await bot.telegram.sendDocument(
             user.user_id,
-            { source: buffer, filename: `Oylik_Hisobot_${firstDayOfLastMonth.getMonth()+1}.docx` },
-            { caption: `📊 Sizning ${periodName} moliyaviy hisobotingiz (Word formati).` }
+            { source: buffer, filename: `Oylik_Hisobot_${firstDayOfLastMonth.getMonth()+1}.xlsx` },
+            { caption: `📊 Sizning ${periodName} moliyaviy hisobotingiz (Excel formati).` }
           );
         } catch (e) {
           console.error(`Error generating monthly report for ${user.user_id}:`, e);

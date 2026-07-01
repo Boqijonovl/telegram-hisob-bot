@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { db } from './db.js';
 import { initBot, bot, sendBudgetAlert, broadcastMessage } from './bot.js';
-import { generateWordReport } from './reportGenerator.js';
+import { generateExcelReport } from './reportGenerator.js';
 
 dotenv.config();
 
@@ -425,27 +425,23 @@ app.post('/api/send-word', async (req, res) => {
     // Fetch transactions and settings
     const { data: transactions } = await db.getTransactions(userId);
     const settings = await db.getSettings(userId);
-    
-    if (!transactions || transactions.length === 0) {
-      return res.status(400).json({ error: 'No transactions found' });
-    }
+    const stats = await db.getStats(userId);
 
-    const sortedTx = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const startDate = new Date(sortedTx[0].date).toLocaleDateString('uz-UZ');
-    const endDate = new Date(sortedTx[sortedTx.length - 1].date).toLocaleDateString('uz-UZ');
-    
-    const buffer = await generateWordReport(sortedTx, settings, `${startDate} - ${endDate}`, settings.currency);
-    
+    const now = new Date();
+    const periodName = `${now.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })} oyi uchun`;
+
+    const buffer = await generateExcelReport(transactions, stats, periodName, stats.currency || 'UZS');
+
     await bot.telegram.sendDocument(
       userId,
-      { source: buffer, filename: `Hisobot_${new Date().toISOString().substring(0,10)}.docx` },
-      { caption: `📊 Sizning barcha tranzaksiyalaringiz Word hisoboti.\nDavr: ${startDate} - ${endDate}` }
+      { source: buffer, filename: `Moliyaviy_Hisobot_${now.getTime()}.xlsx` },
+      { caption: `📊 Sizning moliyaviy hisobotingiz (Excel formati).` }
     );
-    
+
     res.json({ success: true });
   } catch (error) {
-    console.error('Error sending Word report via bot:', error);
-    res.status(500).json({ error: 'Failed to send Word report' });
+    console.error('Error sending excel report:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

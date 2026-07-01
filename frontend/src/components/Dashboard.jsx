@@ -169,13 +169,13 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
   }, [transactions]);
   const progressPercent = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : (stats.totalExpense > 0 ? 100 : 0);
 
-  const handleExportWord = async () => {
+  const handleExportExcel = async () => {
     try {
       setIsExporting(true);
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
       
       // Send to backend to forward to Telegram Bot
-      const res = await fetch(`${API_URL}/api/send-word`, {
+      const res = await fetch(`${API_URL}/api/send-excel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -378,9 +378,9 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
         </div>
       )}
 
-      {/* Word Export Button */}
+      {/* Excel Export Button */}
       <button 
-        onClick={handleExportWord}
+        onClick={handleExportExcel}
         disabled={isExporting}
         style={{
           width: '100%',
@@ -401,7 +401,7 @@ function Dashboard({ transactions, stats, onDelete, formatAmount, t, lang, API_U
         }}
       >
         {isExporting ? <Loader size={18} className="spin-animation" /> : <Download size={18} />}
-        {t.downloadWord || "Word hisobot (Telegramga)"}
+        {t.downloadWord ? t.downloadWord.replace('Word', 'Excel') : "Excel hisobot (Telegramga)"}
       </button>
     </div>
   );
