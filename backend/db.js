@@ -238,6 +238,48 @@ export const db = {
     };
   },
 
+  // Get Super Admin System Stats
+  async getSuperAdminStats() {
+    try {
+      const { count: userCount } = await supabase
+        .from('user_settings')
+        .select('*', { count: 'exact', head: true });
+        
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('amount, type, date')
+        .limit(100000);
+
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let todayTxCount = 0;
+      
+      const today = new Date().toISOString().substring(0, 10);
+
+      if (transactions) {
+        transactions.forEach(tx => {
+          const amount = parseFloat(tx.amount);
+          if (tx.type === 'income') totalIncome += amount;
+          else totalExpense += amount;
+          
+          if (tx.date.substring(0, 10) === today) {
+            todayTxCount++;
+          }
+        });
+      }
+
+      return {
+        totalUsers: userCount || 0,
+        totalTransactions: transactions ? transactions.length : 0,
+        todayTransactions: todayTxCount,
+        totalVolume: totalIncome + totalExpense
+      };
+    } catch (e) {
+      console.error("Super Admin Stats Error:", e);
+      return { totalUsers: 0, totalTransactions: 0, todayTransactions: 0, totalVolume: 0 };
+    }
+  },
+
   // Get all user settings for admin panel
   async getAllUserSettings() {
     const { data, error } = await supabase

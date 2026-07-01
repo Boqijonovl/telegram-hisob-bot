@@ -5,6 +5,18 @@ import { db } from './db.js';
 import { initBot, bot, sendBudgetAlert, broadcastMessage } from './bot.js';
 import { generateExcelReport } from './reportGenerator.js';
 
+// System logs buffer for Super Admin
+const systemLogs = [];
+const originalConsoleError = console.error;
+console.error = function (...args) {
+  try {
+    const msg = args.map(a => typeof a === 'object' ? (a && a.message ? a.message : JSON.stringify(a)) : a).join(' ');
+    systemLogs.unshift({ time: new Date().toISOString(), message: msg });
+    if (systemLogs.length > 100) systemLogs.pop();
+  } catch(e) {}
+  originalConsoleError.apply(console, args);
+};
+
 dotenv.config();
 
 const app = express();
@@ -367,15 +379,48 @@ app.get('/api/admin/users/:id/stats', async (req, res) => {
 app.post('/api/admin/make-admin', async (req, res) => {
   try {
     const isAdmin = await checkAdmin(req);
-    if (!isAdmin) return res.status(403).json({ error: 'Ruxsat berilmagan' });
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
     const { targetUserId } = req.body;
-    if (!targetUserId) return res.status(400).json({ error: 'Target user ID is required' });
+    await db.updateSettings(targetUserId, { admin: true });
+    
+    // Notify the user they are now an admin
+    try {
+      await bot.telegram.sendMessage(targetUserId, "🎉 Tabriklaymiz! Sizga administrator huquqlari berildi. Dasturni qayta ishga tushiring.");
+    } catch (e) {
+      console.error('Failed to notify new admin:', e);
+    }
 
-    const updated = await db.makeAdmin(targetUserId);
-    res.json(updated);
+    res.json({ success: true });
   } catch (error) {
     console.error('Error making admin:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get Super Admin Stats
+app.get('/api/admin/super-stats', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const stats = await db.getSuperAdminStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching super admin stats:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get System Logs
+app.get('/api/admin/logs', async (req, res) => {
+  try {
+    const isAdmin = await checkAdmin(req);
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+    
+    res.json(systemLogs);
+  } catch (error) {
+    console.error('Error fetching system logs:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
