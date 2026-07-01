@@ -786,6 +786,7 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error processing debts for user ${user.user_id}:`, e);
         }
+      }
     } catch (error) {
       console.error('Error in daily cron job execution:', error);
     }
@@ -823,6 +824,7 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error generating weekly report for ${user.user_id}:`, e);
         }
+      }
     } catch (error) {
       console.error('Error in weekly cron job execution:', error);
     }
@@ -867,6 +869,7 @@ export function initCronJobs() {
         } catch (e) {
           console.error(`Error generating monthly report for ${user.user_id}:`, e);
         }
+      }
     } catch (error) {
       console.error('Error in monthly cron job execution:', error);
     }
