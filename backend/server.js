@@ -434,6 +434,7 @@ app.get('/api/admin/super-stats', async (req, res) => {
     if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
     
     const stats = await db.getSuperAdminStats();
+    stats.isMaintenanceMode = isMaintenanceMode;
     res.json(stats);
   } catch (error) {
     console.error('Error fetching super admin stats:', error);

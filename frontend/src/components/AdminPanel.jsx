@@ -42,7 +42,13 @@ export default function AdminPanel({
       const res = await fetch(`${apiUrl}/api/admin/super-stats`, {
         headers: { 'x-telegram-user-id': String(tgUser.id) }
       });
-      if (res.ok) setSuperStats(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setSuperStats(data);
+        if (data.isMaintenanceMode !== undefined) {
+          setIsMaintenance(data.isMaintenanceMode);
+        }
+      }
     } catch (e) {
       console.error('Failed to fetch super stats', e);
     }
