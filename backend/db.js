@@ -45,6 +45,8 @@ export const db = {
     if (limit !== null) {
       const start = offset || 0;
       query = query.range(start, start + limit - 1);
+    } else {
+      query = query.limit(100000); // Prevent Supabase default 1000 row limit
     }
 
     const { data, count, error } = await query;

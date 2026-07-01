@@ -36,25 +36,6 @@ const getUserId = (req) => {
 app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
-// Premium check middleware
-app.use(async (req, res, next) => {
-  if (req.path === '/api/settings' || req.path.startsWith('/api/admin')) {
-    return next();
-  }
-  
-  const userId = getUserId(req);
-  if (userId === '123456') return next();
-  
-  try {
-    const settings = await db.getSettings(userId);
-    if (settings.premium_until && new Date(settings.premium_until) < new Date()) {
-      return res.status(402).json({ error: 'To\'lov muddati tugagan', code: 'PAYMENT_REQUIRED' });
-    }
-  } catch (e) {
-    console.error('Premium check error:', e);
-  }
-  next();
-});
 
 // Get all transactions (with pagination)
 app.get('/api/transactions', async (req, res) => {
@@ -95,14 +76,24 @@ app.post('/api/transactions', async (req, res) => {
     if (type === 'expense') {
       (async () => {
         try {
-          const stats = await db.getStats(userId);
-          if (stats.budget > 0 && stats.totalExpense > stats.budget) {
-            const settings = await db.getSettings(userId);
-            // Send alert to Telegram chat
-            await sendBudgetAlert(userId, stats.totalExpense, stats.budget, settings.currency);
+          const { data: allTransactions } = await db.getTransactions(userId);
+          const settings = await db.getSettings(userId);
+          
+          if (settings.budget > 0) {
+            const now = new Date();
+            const currentMonthTransactions = allTransactions.filter(tx => {
+              const d = new Date(tx.date);
+              return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && tx.type === 'expense';
+            });
+            
+            const currentMonthExpense = currentMonthTransactions.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+            
+            if (currentMonthExpense > settings.budget) {
+              await sendBudgetAlert(userId, currentMonthExpense, settings.budget, settings.currency);
+            }
           }
         } catch (err) {
-          console.error('Error in budget notification check:', err);
+          console.error('Error triggering budget alert:', err);
         }
       })();
     }
