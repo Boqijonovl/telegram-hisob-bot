@@ -300,13 +300,20 @@ function App() {
     // Calculate all-time balance up to the end of the currently selected month
     let allTimeIncome = 0;
     let allTimeExpense = 0;
+    let allTimeVaultBalance = 0;
     const endOfCurrentMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1);
     
     transactions.forEach(tx => {
       const d = new Date(tx.date);
       if (d < endOfCurrentMonth) {
-        if (tx.type === 'income') allTimeIncome += parseFloat(tx.amount);
-        else allTimeExpense += parseFloat(tx.amount);
+        const amount = parseFloat(tx.amount);
+        if (tx.type === 'income') {
+          allTimeIncome += amount;
+          if (tx.category === 'Xazna') allTimeVaultBalance -= amount;
+        } else {
+          allTimeExpense += amount;
+          if (tx.category === 'Xazna') allTimeVaultBalance += amount;
+        }
       }
     });
 
@@ -317,7 +324,7 @@ function App() {
       totalExpense,
       budget: settings.budget || 0,
       categories,
-      vaultBalance: categoryTotals['Xazna'] ? (categoryTotals['Xazna'].expense - categoryTotals['Xazna'].income) : 0
+      vaultBalance: allTimeVaultBalance
     };
   };
 
